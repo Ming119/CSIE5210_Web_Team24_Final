@@ -1,0 +1,110 @@
+.card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 分頁樣式調整 */
+.pagination .page-link {
+  color: #333;
+  border: 1px solid #dee2e6;
+  padding: 0.5rem 0.75rem;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+.pagination .page-link:hover {
+  background-color: #f8f9fa;
+  color: #28a745;
+}
+
+/* 標題樣式 */
+.fw-bold {
+  font-weight: 600 !important;
+}
+
+/* 調整容器與間距 */
+.container-fluid.p-4 {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+/* 卡片內容樣式 */
+.card-title {
+  font-size: 1.25rem;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* 活動資訊頁面樣式 */
+.activity-card {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.activity-card:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.form-check-input:checked {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+/* 付款資訊表格樣式 */
+.table-payment th,
+.table-payment td {
+  vertical-align: middle;
+}
+
+.table-payment .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* 表單欄位樣式 */
+.form-control:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* 付款方式區塊樣式 */
+.payment-method-container {
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.payment-method-title {
+  color: #28a745;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* 負責人資訊表格樣式 */
+.officer-table th:first-child {
+  width: 50px;
+}
+
+/* 按鈕樣式 */
+.btn-approve {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+.btn-approve:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
