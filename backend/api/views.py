@@ -158,6 +158,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['user'] = {
             'id': self.user.id,
             'username': self.user.username,
+            'is_admin': self.user.is_admin,
         }
         return data
 

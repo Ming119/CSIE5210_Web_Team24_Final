@@ -43,11 +43,11 @@ def make_disbanded(modeladmin, request, queryset):
 
 
 class ClubAdmin(admin.ModelAdmin):
-    list_display = ("name", "description", "status", "foundation_date")
+    list_display = ("name", "description", "max_member", "status", "foundation_date")
     search_fields = ("name",)
     inlines = [MembershipInline]
     actions = [make_active, make_pending, make_rejected, make_suspended, make_disbanded]
-    fields = ("name", "description", "status", "foundation_date")
+    fields = ("name", "description", "max_member", "status", "foundation_date")
     readonly_fields = ("foundation_date",)
 
 
@@ -60,9 +60,27 @@ class MembershipAdmin(admin.ModelAdmin):
 
 # Custom admin class for Event model
 class EventAdmin(admin.ModelAdmin):
-    list_display = ("name", "club", "is_public")
-    list_filter = ("is_public", "club")
-    search_fields = ("name", "club__name")
+    list_display = (
+        "name",
+        "club",
+        "status",
+        "start_date",
+        "end_date",
+        "fee",
+        "quota",
+    )
+    list_filter = ("status", "club", "start_date", "end_date")
+    search_fields = ("name", "club__name", "description")
+    fields = (
+        "name",
+        "club",
+        "description",
+        "status",
+        "start_date",
+        "end_date",
+        "fee",
+        "quota",
+    )
 
 
 # Custom admin class for EventParticipation model

@@ -31,13 +31,15 @@ const Header = () => {
       });
       if (!res.ok) throw new Error("登入失敗");
       const data = await res.json();
+      console.log("login API response:", data); 
       localStorage.setItem("access", data.access);
-      localStorage.setItem("user_id", String(data.user.id)); // <--- 加這行
+      localStorage.setItem("user_id", String(data.user.id));
+      localStorage.setItem("is_admin", String(data.user.is_admin));
       setIsLoggedIn(true);
       setShowLogin(false);
       setLoginUsername("");
       setLoginPassword("");
-      window.location.reload();
+      // window.location.reload();
     } catch (err) {
       alert("登入失敗，請檢查帳號密碼");
     }

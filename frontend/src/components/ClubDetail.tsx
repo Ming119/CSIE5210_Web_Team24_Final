@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ActivityForm from "./ActivityForm";
 
 // 型別定義
 type Member = {
@@ -18,9 +19,13 @@ type Member = {
 type Activity = {
   id: number;
   name: string;
-  period: string;
+  start_date: string;
+  end_date: string;
   fee: number;
+  quota: number;
   status: string;
+  description?: string;
+  payment_methods?: any;
 };
 
 type ClubDetailData = {
@@ -35,6 +40,8 @@ type ClubDetailData = {
   presidentName?: string;
 };
 
+type PaymentStatus = "unpaid" | "pending" | "paid" | "confirmed";
+
 // 職位常數
 const CLUB_POSITIONS = [
   "社長",
@@ -43,6 +50,15 @@ const CLUB_POSITIONS = [
   "財務幹部",
   "公關幹部",
   "社員",
+];
+
+// 幹部職位
+const MANAGER_POSITIONS = [
+  "社長",
+  "副社長",
+  "活動幹部",
+  "財務幹部",
+  "公關幹部",
 ];
 
 const formatClubStatus = (status: string) => {
@@ -68,52 +84,48 @@ const ClubDetail = () => {
   const [clubDetail, setClubDetail] = useState<ClubDetailData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditingClubInfo, setIsEditingClubInfo] = useState<boolean>(false);
+  const [isEditingClubInfo, setIsEditingClubInfo] = useState(false);
   const [editedClubInfo, setEditedClubInfo] = useState({
     name: "",
     description: "",
     maxMembers: 0,
   });
-  const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
-  const [editingMemberPosition, setEditingMemberPosition] = useState<string>("");
+  const [showCreateActivity, setShowCreateActivity] = useState(false);
+  const [showEditActivity, setShowEditActivity] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
 
-  // 取得當前登入 user id
-  const currentUserId = Number(localStorage.getItem("user_id"));
+  const currentUserId = Number(localStorage.getItem("user_id") || 0);
+
+  const fetchClubDetail = async () => {
+    setLoading(true);
+    console.log("fetchClubDetail, id=", id);
+    try {
+      const res = await fetch(`/api/clubs/${id}/`);
+      console.log("API response:", res.status);
+      if (!res.ok) throw new Error("無法取得社團資料");
+      const data = await res.json();
+      setClubDetail({
+        ...data,
+        foundationDate: data.foundation_date,
+      });
+      setEditedClubInfo({
+        name: data.name,
+        description: data.description,
+        maxMembers: data.memberCount?.max ?? 0,
+      });
+      setError(null);
+    } catch (err) {
+      setError("無法載入社團詳情。請稍後再試。");
+      console.error(err);
+    } finally {
+      setLoading(false);
+      console.log("setLoading(false)");
+    }
+  };
 
   useEffect(() => {
-    const fetchClubDetail = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("access");
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-        const res = await fetch(`/api/clubs/${id}/`, {
-          headers,
-        });
-        if (!res.ok) throw new Error("無法取得社團資料");
-        const data = await res.json();
-        setClubDetail({
-          ...data,
-          foundationDate: data.foundation_date,
-        });
-        setEditedClubInfo({
-          name: data.name,
-          description: data.description,
-          maxMembers: data.memberCount?.max ?? 0,
-        });
-        setError(null);
-      } catch (err) {
-        setError("無法載入社團詳情。請稍後再試。");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchClubDetail();
+    // eslint-disable-next-line
   }, [id]);
 
   if (loading) return <div className="text-center">載入中...</div>;
@@ -126,41 +138,65 @@ const ClubDetail = () => {
 
   // 取得自己在這個社團的 membership
   const myMembership = clubDetail.members.find(m => m.user === currentUserId);
-  const myRole = myMembership
-    ? myMembership.position || (myMembership.is_manager ? "社長" : "社員")
-    : "非社員";
 
-  console.log("myMembership", myMembership);
-  console.log("currentUserId", currentUserId);
-  console.log("clubDetail.members", clubDetail.members);
+  // 幹部判斷
+  const isManager = myMembership &&
+    (myMembership.is_manager ||
+      (myMembership.position && MANAGER_POSITIONS.includes(myMembership.position)));
+
   // 儲存社團資訊
   const handleSaveClubInfo = async () => {
-  if (!clubDetail) return;
-  try {
-    const token = localStorage.getItem("access");
-    const res = await fetch(`/api/clubs/${clubDetail.id}/`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: editedClubInfo.name,
-        description: editedClubInfo.description,
-        max_member: editedClubInfo.maxMembers,
-      }),
-    });
-    if (!res.ok) throw new Error("儲存失敗");
-    const data = await res.json();
-    setClubDetail({
-      ...data,
-      foundationDate: data.foundation_date,
-    });
-    setIsEditingClubInfo(false);
-  } catch (err) {
-    alert("儲存失敗，請稍後再試。");
-  }
-};
+    if (!clubDetail) return;
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/clubs/${clubDetail.id}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: editedClubInfo.name,
+          description: editedClubInfo.description,
+          max_member: editedClubInfo.maxMembers,
+        }),
+      });
+      if (!res.ok) throw new Error("儲存失敗");
+      const data = await res.json();
+      setClubDetail({
+        ...data,
+        foundationDate: data.foundation_date,
+      });
+      setIsEditingClubInfo(false);
+    } catch (err) {
+      alert("儲存失敗，請稍後再試。");
+    }
+  };
+
+  const handleUpdateMember = async (memberId: number, update: { position?: string; status?: string }) => {
+    if (!clubDetail) return;
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/memberships/${memberId}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(update),
+      });
+      if (!res.ok) throw new Error("更新失敗");
+      // 重新取得社團詳情
+      await fetchClubDetail();
+    } catch (err) {
+      alert("更新失敗，請稍後再試。");
+    }
+  };
+
+  const handleEditActivity = (activity: Activity) => {
+    setEditingActivity(activity);
+    setShowEditActivity(true);
+  };
 
   return (
     <div>
@@ -170,7 +206,7 @@ const ClubDetail = () => {
           <Link to="/" className="btn btn-outline-secondary me-2">
             返回社團列表
           </Link>
-          {myMembership && myMembership.is_manager && myMembership.position === "社長" && !isEditingClubInfo && (
+          {isManager && !isEditingClubInfo && (
             <button
               className="btn btn-primary"
               onClick={() => setIsEditingClubInfo(true)}
@@ -254,7 +290,7 @@ const ClubDetail = () => {
                     創立日期：{clubDetail.foundationDate}
                   </p>
                   <p className="mb-0 text-start">
-                    社團狀態：{formatClubStatus(clubDetail.status)}
+                    社團狀態：{clubDetail.status}
                   </p>
                   <div className="mt-3">
                     <button
@@ -282,7 +318,7 @@ const ClubDetail = () => {
                     社團人數：{currentMemberCount}/{clubDetail.memberCount.max}
                   </p>
                   <p className="mb-0 text-start">
-                    社團狀態：{formatClubStatus(clubDetail.status)}
+                    社團狀態：{clubDetail.status}
                   </p>
                 </div>
               )}
@@ -306,22 +342,64 @@ const ClubDetail = () => {
             {clubDetail.members.map((member) => (
               <tr key={member.id}>
                 <td>{member.username}</td>
-                <td>{member.position || "-"}</td>
                 <td>
-                  {member.status === "active" || member.status === "accepted"
-                    ? "已加入"
-                    : member.status === "pending"
-                      ? "待審核"
-                      : member.status === "rejected"
-                        ? "已拒絕"
-                        : member.status}
+                  {isManager ? (
+                    <select
+                      value={member.position || ""}
+                      onChange={e => handleUpdateMember(member.id, { position: e.target.value })}
+                    >
+                      <option value="">無</option>
+                      {CLUB_POSITIONS.map(pos => (
+                        <option key={pos} value={pos}>{pos}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    member.position || "-"
+                  )}
                 </td>
-                <td>{member.is_manager ? "是" : "否"}</td>
+                <td>
+                  {isManager ? (
+                    <select
+                      value={member.status}
+                      onChange={e => handleUpdateMember(member.id, { status: e.target.value })}
+                    >
+                      <option value="pending">待審核</option>
+                      <option value="accepted">已加入</option>
+                      <option value="rejected">已拒絕</option>
+                    </select>
+                  ) : (
+                    member.status === "active" || member.status === "accepted"
+                      ? "已加入"
+                      : member.status === "pending"
+                        ? "待審核"
+                        : member.status === "rejected"
+                          ? "已拒絕"
+                          : member.status
+                  )}
+                </td>
+                <td>
+                  {member.is_manager ||
+                    (member.position && MANAGER_POSITIONS.includes(member.position))
+                    ? "是"
+                    : "否"}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* 活動表格上方新增活動按鈕 */}
+      {isManager && (
+        <div className="mb-3 text-end">
+          <button
+            className="btn btn-success"
+            onClick={() => setShowCreateActivity(true)}
+          >
+            新增活動
+          </button>
+        </div>
+      )}
 
       {/* 活動表格 */}
       <div className="table-responsive">
@@ -331,21 +409,65 @@ const ClubDetail = () => {
               <th>活動名稱</th>
               <th>日期</th>
               <th>費用</th>
+              <th>名額</th>
               <th>狀態</th>
+              <th>動作</th>
             </tr>
           </thead>
           <tbody>
             {clubDetail.activities.map((activity) => (
               <tr key={activity.id}>
                 <td>{activity.name}</td>
-                <td>{activity.period}</td>
+                <td>
+                  {activity.start_date && activity.end_date
+                    ? `${activity.start_date} - ${activity.end_date}`
+                    : "-"}
+                </td>
                 <td>{activity.fee}</td>
+                <td>{activity.quota}</td>
                 <td>{activity.status}</td>
+                <td>
+                  {isManager && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleEditActivity(activity)}
+                    >
+                      編輯
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* 彈出建立活動表單 */}
+      {showCreateActivity && (
+        <ActivityForm
+          mode="create"
+          clubId={clubDetail.id}
+          onClose={() => setShowCreateActivity(false)}
+          onSuccess={() => {
+            setShowCreateActivity(false);
+            fetchClubDetail();
+          }}
+        />
+      )}
+
+      {/* 彈出編輯活動表單 */}
+      {showEditActivity && editingActivity && (
+        <ActivityForm
+          mode="edit"
+          clubId={clubDetail.id}
+          initialData={editingActivity}
+          onClose={() => setShowEditActivity(false)}
+          onSuccess={() => {
+            setShowEditActivity(false);
+            fetchClubDetail();
+          }}
+        />
+      )}
     </div>
   );
 };

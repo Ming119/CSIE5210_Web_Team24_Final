@@ -39,8 +39,20 @@ class Event(models.Model):
   club = models.ForeignKey(Club, on_delete=models.CASCADE)
   name = models.CharField(max_length=255)
   description = models.TextField()
-  max_participants = models.IntegerField(default=0)
-  is_public = models.BooleanField(default=True)
+  quota = models.IntegerField(default=0)
+  status = models.CharField(
+        max_length=20,
+        choices=[
+            ('planning', '規劃中'),
+            ('ongoing', '進行中'),
+            ('completed', '已結束'),
+        ],
+        default='planning'
+    )
+  start_date = models.DateField()
+  end_date = models.DateField()
+  fee = models.PositiveIntegerField(default=0)
+  payment_methods = models.JSONField(default=dict)
 
   @property
   def participant_count(self):

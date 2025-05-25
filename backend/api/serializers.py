@@ -52,7 +52,18 @@ class MembershipSerializer(serializers.ModelSerializer):
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = ["id", "name", "period", "fee", "status"]
+        fields = [
+            "id",
+            "name",
+            "description",
+            "fee",
+            "quota",
+            "status",
+            "start_date",
+            "end_date",
+            "club",
+        ]
+        read_only_fields = ("club",)
 
 class ClubSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
