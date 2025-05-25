@@ -1,9 +1,9 @@
 import {
-  type Club,
-  type Member,
   type Activity,
-  MockDataGenerator,
+  type Club,
   DataFormatter,
+  type Member,
+  MockDataGenerator,
 } from "./models";
 
 export interface ClubDetailData {

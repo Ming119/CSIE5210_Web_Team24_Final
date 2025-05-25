@@ -1,14 +1,19 @@
 from rest_framework import generics, status, views
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import action
-from .models import User, Club, Membership, Event, EventParticipation, FinanceRecord
-from .serializers import UserSerializer, ClubSerializer, EventSerializer, FinanceRecordSerializer
-from .permissions import IsAdmin, IsClubManager, CanViewEvent
+
+from .models import (Club, Event, EventParticipation, FinanceRecord,
+                     Membership, User)
+from .permissions import CanViewEvent, IsAdmin, IsClubManager
+from .serializers import (ClubSerializer, EventSerializer,
+                          FinanceRecordSerializer, UserRegisterSerializer,
+                          UserSerializer)
+
 
 class RegisterView(generics.CreateAPIView):
   queryset = User.objects.all()
-  serializer_class = UserSerializer
+  serializer_class = UserRegisterSerializer
   permission_classes = [AllowAny]
   def perform_create(self, serializer):
     user = serializer.save()

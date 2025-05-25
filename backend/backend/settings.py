@@ -27,6 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite 預設 port
+    "http://127.0.0.1:5173",
+]
 
 # Application definition
 
@@ -40,7 +46,8 @@ INSTALLED_APPS = [
     'django_extensions',           # Django Extensions
     'rest_framework',              # Django REST Framework
     'rest_framework_simplejwt',    # JWT Authentication
-    'api'                          # My API app
+    'api',                         # My API app
+    'corsheaders',                 # CORS headers
 ]
 
 # Settings for Django REST Framework
@@ -54,6 +61,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

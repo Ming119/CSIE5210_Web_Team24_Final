@@ -1,14 +1,42 @@
 from rest_framework import serializers
-from .models import User, Club, Event, FinanceRecord, Membership, EventParticipation
+
+from .models import (Club, Event, EventParticipation, FinanceRecord,
+                     Membership, User)
+
 
 class UserSerializer(serializers.ModelSerializer):
-  clubs = serializers.SerializerMethodField()
-  def get_clubs(self, obj):
-    return ClubSerializer(obj.club_set.all(), many=True).data
-  class Meta:
-    model = User
-    fields = ['id', 'username', 'email', 'is_admin', 'clubs']
-    read_only_fields = ['is_admin']
+    clubs = serializers.SerializerMethodField()
+    is_admin = serializers.BooleanField(read_only=True)
+    password = serializers.CharField(write_only=True, required=True)
+
+    def get_clubs(self, obj):
+        return ClubSerializer(obj.club_set.all(), many=True).data
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'is_admin', 'clubs', 'password']
+        read_only_fields = ['is_admin']
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'password']
 
 class ClubSerializer(serializers.ModelSerializer):
   members = serializers.SerializerMethodField()
