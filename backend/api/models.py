@@ -1,5 +1,6 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
+
 
 class User(AbstractUser):
   is_admin = models.BooleanField(default=False)
@@ -7,6 +8,19 @@ class User(AbstractUser):
 class Club(models.Model):
   name = models.CharField(max_length=255)
   description = models.TextField()
+  status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('pending', 'Pending'),
+            ('rejected', 'Rejected'),
+            ('suspended', 'Suspended'),
+            ('disbanded', 'Disbanded'),
+        ],
+        default='pending'
+    )
+  max_member = models.PositiveIntegerField()
+  foundation_date = models.DateField(auto_now_add=True)
 
   @property
   def member_count(self):
@@ -17,7 +31,7 @@ class Membership(models.Model):
   club = models.ForeignKey(Club, on_delete=models.CASCADE)
   status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('rejected', 'Rejected')], default='pending')
   is_manager = models.BooleanField(default=False)
-
+  position = models.CharField(max_length=20, blank=True, null=True)
   class Meta:
     unique_together = ('user', 'club')
 

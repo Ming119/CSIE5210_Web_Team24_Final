@@ -1,44 +1,82 @@
 from django.contrib import admin
-from .models import User, Club, Membership, Event, EventParticipation, FinanceRecord
+
+from .models import (Club, Event, EventParticipation, FinanceRecord,
+                     Membership, User)
+
 
 # Custom admin class for User model
 class UserAdmin(admin.ModelAdmin):
-  list_display = ('username', 'email', 'is_admin')
-  search_fields = ('username', 'email')
-  list_filter = ('is_admin',)
+    list_display = ("username", "email", "is_admin")
+    search_fields = ("username", "email")
+    list_filter = ("is_admin",)
+
 
 # Custom admin class for Club model with inline Membership editing
 class MembershipInline(admin.TabularInline):
-  model = Membership
-  extra = 1
+    model = Membership
+    extra = 1
+
+
+@admin.action(description="設為已成立")
+def make_active(modeladmin, request, queryset):
+    queryset.update(status="active")
+
+
+@admin.action(description="設為待審核")
+def make_pending(modeladmin, request, queryset):
+    queryset.update(status="pending")
+
+
+@admin.action(description="設為已拒絕")
+def make_rejected(modeladmin, request, queryset):
+    queryset.update(status="rejected")
+
+
+@admin.action(description="設為暫停營運")
+def make_suspended(modeladmin, request, queryset):
+    queryset.update(status="suspended")
+
+
+@admin.action(description="設為已解散")
+def make_disbanded(modeladmin, request, queryset):
+    queryset.update(status="disbanded")
+
 
 class ClubAdmin(admin.ModelAdmin):
-  list_display = ('name', 'description')
-  search_fields = ('name',)
-  inlines = [MembershipInline]
+    list_display = ("name", "description", "status", "foundation_date")
+    search_fields = ("name",)
+    inlines = [MembershipInline]
+    actions = [make_active, make_pending, make_rejected, make_suspended, make_disbanded]
+    fields = ("name", "description", "status", "foundation_date")
+    readonly_fields = ("foundation_date",)
+
 
 # Custom admin class for Membership model
 class MembershipAdmin(admin.ModelAdmin):
-  list_display = ('user', 'club', 'is_manager')
-  list_filter = ('is_manager',)
-  search_fields = ('user__username', 'club__name')
+    list_display = ("user", "club", "is_manager")
+    list_filter = ("is_manager",)
+    search_fields = ("user__username", "club__name")
+
 
 # Custom admin class for Event model
 class EventAdmin(admin.ModelAdmin):
-  list_display = ('name', 'club', 'is_public')
-  list_filter = ('is_public', 'club')
-  search_fields = ('name', 'club__name')
+    list_display = ("name", "club", "is_public")
+    list_filter = ("is_public", "club")
+    search_fields = ("name", "club__name")
+
 
 # Custom admin class for EventParticipation model
 class EventParticipationAdmin(admin.ModelAdmin):
-  list_display = ('user', 'event')
-  search_fields = ('user__username', 'event__name')
+    list_display = ("user", "event")
+    search_fields = ("user__username", "event__name")
+
 
 # Custom admin class for FinanceRecord model
 class FinanceRecordAdmin(admin.ModelAdmin):
-  list_display = ('club', 'amount', 'date', 'description')
-  list_filter = ('club', 'date')
-  search_fields = ('description',)
+    list_display = ("club", "amount", "date", "description")
+    list_filter = ("club", "date")
+    search_fields = ("description",)
+
 
 # Register models with their custom admin classes
 admin.site.register(User, UserAdmin)

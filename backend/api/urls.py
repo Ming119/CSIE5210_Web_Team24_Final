@@ -22,16 +22,19 @@
 #     path('api', include(router.urls)), 
 # ]
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import (TokenObtainPairView,
+                                            TokenRefreshView)
+
 from . import views
+from .views import MyClubsView
 
 router = DefaultRouter()
 
 urlpatterns = [
   path('register/', views.RegisterView.as_view(), name='register'),
-  path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+  #path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
   path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
   path('me/', views.UserSelfView.as_view(), name='user_self'),
   path('users/', views.UserAdminListView.as_view(), name='user_list_admin'),
@@ -44,4 +47,8 @@ urlpatterns = [
   path('clubs/<int:club_id>/finances/', views.FinanceRecordListView.as_view(), name='finance_list'),
   path('clubs/<int:club_id>/finances/<int:pk>/', views.FinanceRecordDetailView.as_view(), name='finance_detail'),
   path('clubs/<int:club_id>/finances/stats/', views.FinanceStatsView.as_view(), name='finance_stats'),
+  path('myclubs/', MyClubsView.as_view(), name='myclubs'),
+  path('clubs/<int:club_id>/approve/', views.ClubApproveView.as_view(), name='club_approve'),
+  path('clubs/<int:pk>/', views.ClubDetailView.as_view(), name="club-detail"),
+  path('login/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
 ]

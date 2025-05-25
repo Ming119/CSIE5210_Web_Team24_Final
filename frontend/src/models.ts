@@ -8,7 +8,7 @@ export interface Club {
     max: number;
   };
   userRole?: string; // 用戶在社團中的身份: 社長, 幹部, 社員, 準社員, 前社員等
-  status?: "active" | "suspended" | "disbanded"; // 社團狀態
+  status?: "active" | "pending" | "rejected" | "suspended" | "disbanded"; // 社團狀態
   foundationDate?: Date;
 }
 
@@ -82,8 +82,11 @@ export class DataFormatter {
   }
 
   // 格式化單一日期
-  static formatDate(date: Date): string {
-    return date.toLocaleDateString("zh-TW", {
+  static formatDate(date: string | Date): string {
+    // 若是字串，轉成 Date 物件
+    const d = typeof date === "string" ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString("zh-TW", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -94,7 +97,11 @@ export class DataFormatter {
   static formatClubStatus(status: Club["status"]): string {
     switch (status) {
       case "active":
-        return "正常";
+        return "已成立";
+      case "pending":
+        return "待審核";
+      case "rejected":
+        return "已拒絕";
       case "suspended":
         return "暫停營運";
       case "disbanded":
@@ -230,9 +237,8 @@ export class MockDataGenerator {
 
     return {
       id: index + 1,
-      name: `${positions[index % positions.length]}${
-        Math.floor(index / positions.length) + 1
-      }`,
+      name: `${positions[index % positions.length]}${Math.floor(index / positions.length) + 1
+        }`,
       position: positions[index % positions.length],
       phone: `091234567${index}`,
       email: `member${index + 1}@ntu.edu.tw`,

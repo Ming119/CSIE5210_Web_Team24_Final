@@ -10,10 +10,13 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
 
     def get_clubs(self, obj):
-        return ClubSerializer(obj.club_set.all(), many=True).data
+        # 透過 Membership 查詢用戶參與的社團
+        club_ids = obj.membership_set.values_list("club_id", flat=True)
+        clubs = Club.objects.filter(id__in=club_ids)
+        return ClubSerializer(clubs, many=True).data
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop("password")
         user = User(**validated_data)
         user.set_password(password)
         user.save()
@@ -21,14 +24,15 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'is_admin', 'clubs', 'password']
-        read_only_fields = ['is_admin']
+        fields = ["id", "username", "email", "is_admin", "clubs", "password"]
+        read_only_fields = ["is_admin"]
+
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop("password")
         user = User(**validated_data)
         user.set_password(password)
         user.save()
@@ -36,42 +40,60 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = ["id", "username", "email", "password"]
 
-class ClubSerializer(serializers.ModelSerializer):
-  members = serializers.SerializerMethodField()
-  def get_members(self, obj):
-    return MembershipSerializer(obj.membership_set.filter(status='accepted'), many=True).data
-  
-  class Meta:
-    model = Club
-    fields = ['id', 'name', 'description', 'member_count', 'members']
 
 class MembershipSerializer(serializers.ModelSerializer):
-  user = serializers.PrimaryKeyRelatedField(read_only=True)
-  club = serializers.PrimaryKeyRelatedField(read_only=True)
-  class Meta:
-    model = Membership
-    fields = ['id', 'user', 'club', 'status', 'is_manager']
-    read_only_fields = ['user', 'club']
+    username = serializers.CharField(source="user.username", read_only=True)
+    class Meta:
+        model = Membership
+        fields = ["id", "user", "username", "club", "status", "is_manager", "position"]
 
 class EventSerializer(serializers.ModelSerializer):
-  participants = serializers.SerializerMethodField()
-  def get_participants(self, obj):
-    return EventParticipationSerializer(obj.eventparticipation_set.all(), many=True).data
-  class Meta:
-    model = Event
-    fields = ['id', 'club', 'name', 'description', 'is_public', 'max_participants', 'participant_count', 'participants']
+    class Meta:
+        model = Event
+        fields = ["id", "name", "period", "fee", "status"]
+
+class ClubSerializer(serializers.ModelSerializer):
+    members = serializers.SerializerMethodField()
+    activities = serializers.SerializerMethodField()
+    memberCount = serializers.SerializerMethodField()
+    presidentName = serializers.SerializerMethodField()
+
+    def get_members(self, obj):
+        return MembershipSerializer(obj.membership_set.filter(status="accepted"), many=True).data
+
+    def get_activities(self, obj):
+        return EventSerializer(obj.event_set.all(), many=True).data
+
+    def get_memberCount(self, obj):
+        return {
+            "current": obj.membership_set.filter(status="accepted").count(),
+            "max": obj.max_member,
+        }
+
+    def get_presidentName(self, obj):
+        president = obj.membership_set.filter(is_manager=True, status="accepted").first()
+        return president.user.username if president else None
+
+    class Meta:
+        model = Club
+        fields = [
+            "id", "name", "description", "status", "foundation_date",
+            "memberCount", "members", "activities", "presidentName", "max_member"
+        ]
 
 class EventParticipationSerializer(serializers.ModelSerializer):
-  user = serializers.PrimaryKeyRelatedField(read_only=True)
-  event = serializers.PrimaryKeyRelatedField(read_only=True)
-  class Meta:
-    model = EventParticipation
-    fields = ['id', 'user', 'event']
-    read_only_fields = ['user', 'event']
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    event = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = EventParticipation
+        fields = ["id", "user", "event"]
+        read_only_fields = ["user", "event"]
+
 
 class FinanceRecordSerializer(serializers.ModelSerializer):
-  class Meta:
-    model = FinanceRecord
-    fields = ['id', 'club', 'amount', 'description', 'date']
+    class Meta:
+        model = FinanceRecord
+        fields = ["id", "club", "amount", "description", "date"]

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ClubService } from "../api";
 
 interface CreateClubFormProps {
   onClose: () => void;
@@ -9,51 +8,51 @@ interface CreateClubFormProps {
 const CreateClubForm = ({ onClose, onSuccess }: CreateClubFormProps) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [maxMembers, setMaxMembers] = useState<number>(100);
+  const [maxMembers, setMaxMembers] = useState<number>(20);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!name.trim()) {
-      setError("社團名稱不能為空");
-      return;
-    }
+  if (!name.trim()) {
+    setError("社團名稱不能為空");
+    return;
+  }
+  if (maxMembers < 20) {
+    setError("社團人數上限必須大於 20");
+    return;
+  }
+  if (maxMembers > 500) {
+    setError("社團人數上限不能超過 500");
+    return;
+  }
 
-    if (maxMembers < 1) {
-      setError("社團人數上限必須大於 0");
-      return;
-    }
-
-    if (maxMembers > 500) {
-      setError("社團人數上限不能超過 500");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      await ClubService.createClub({
+  try {
+    setIsSubmitting(true);
+    const token = localStorage.getItem("access");
+    const res = await fetch("/api/clubs/", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         name: name.trim(),
         description: description.trim(),
-        memberCount: {
-          current: 1, // 建立者自己
-          max: maxMembers,
-        },
-        presidentName: "目前登入者", // 實際應用中應從用戶資料中獲取
-        userRole: "社長",
-        status: "active",
-      });
-
-      onSuccess();
-      onClose();
-    } catch (err) {
-      setError("建立社團時發生錯誤，請稍後再試");
-      console.error("建立社團失敗:", err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        max_member: maxMembers,
+      }),
+    });
+    if (!res.ok) throw new Error("建立社團失敗");
+    onSuccess();
+    onClose();
+  } catch (err) {
+    setError("建立社團時發生錯誤，請稍後再試");
+    console.error("建立社團失敗:", err);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleMaxMembersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -127,8 +126,8 @@ const CreateClubForm = ({ onClose, onSuccess }: CreateClubFormProps) => {
                   type="number"
                   className="form-control"
                   id="maxMembers"
-                  min="1"
-                  max="500"
+                  min="20"
+                  max="200"
                   value={maxMembers}
                   onChange={handleMaxMembersChange}
                   disabled={isSubmitting}

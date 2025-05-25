@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { ClubService, DataFormatter } from "../api";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { type Activity, type Member } from "../models";
 
 // 活動負責人介面（僅用於此組件）
@@ -8,12 +7,29 @@ interface ActivityOfficer extends Member {
   isSelected: boolean;
 }
 
+const DataFormatter = {
+  formatCurrency: (amount: number) => `NT$${amount}`,
+  formatDateRange: (period: { startDate: Date; endDate: Date }) =>
+    `${period.startDate.toLocaleDateString()} ~ ${period.endDate.toLocaleDateString()}`,
+  formatActivityStatus: (status: string) => {
+    switch (status) {
+      case "planning":
+        return "規劃中";
+      case "ongoing":
+        return "進行中";
+      case "completed":
+        return "已結束";
+      default:
+        return status;
+    }
+  },
+};
+
 const ActivityDetail = () => {
   const { id, clubId } = useParams<{ id: string; clubId: string }>();
   const navigate = useNavigate();
   const isNew = id === "new";
 
-  // 編輯模式狀態
   const [isEditMode, setIsEditMode] = useState<boolean>(isNew);
   const [loading, setLoading] = useState<boolean>(!isNew);
   const [error, setError] = useState<string | null>(null);
@@ -66,50 +82,40 @@ const ActivityDetail = () => {
           };
 
           setActivity(newActivity);
+          setOfficers([]);
         } else {
-          // 載入現有活動
-          const activityData = await ClubService.getActivity(
-            Number(clubId),
-            Number(id)
-          );
-          setActivity(activityData);
+          // 從後端取得活動資料
+          const res = await fetch(`/api/clubs/${clubId}/events/${id}/`, {
+            headers: { "Content-Type": "application/json" },
+          });
+          if (!res.ok) throw new Error("無法取得活動資料");
+          const activityData = await res.json();
+
+          // 日期欄位轉換
+          setActivity({
+            ...activityData,
+            period: {
+              startDate: new Date(activityData.period.startDate),
+              endDate: new Date(activityData.period.endDate),
+            },
+            paymentPeriod: {
+              startDate: new Date(activityData.paymentPeriod.startDate),
+              endDate: new Date(activityData.paymentPeriod.endDate),
+            },
+          });
+
+          // 從後端取得負責人資料（假設API有提供，否則可根據活動資料取得）
+          if (activityData.officers) {
+            setOfficers(
+              activityData.officers.map((officer: Member) => ({
+                ...officer,
+                isSelected: true,
+              }))
+            );
+          } else {
+            setOfficers([]);
+          }
         }
-
-        // 載入負責人清單（模擬資料）
-        const officerData: ActivityOfficer[] = [
-          {
-            id: 1,
-            name: "社長1",
-            position: "社長",
-            phone: "0912345678",
-            email: "clubleader@ntu.edu.tw",
-            status: "active",
-            joinDate: new Date(2024, 0, 1),
-            isSelected: false,
-          },
-          {
-            id: 2,
-            name: "副社長1",
-            position: "副社長",
-            phone: "0912345677",
-            email: "viceclubleader@ntu.edu.tw",
-            status: "active",
-            joinDate: new Date(2024, 0, 15),
-            isSelected: false,
-          },
-          {
-            id: 3,
-            name: "幹部1",
-            position: "活動幹部",
-            phone: "0912345676",
-            email: "event@ntu.edu.tw",
-            status: "active",
-            joinDate: new Date(2024, 1, 1),
-            isSelected: false,
-          },
-        ];
-
-        setOfficers(officerData);
         setError(null);
       } catch (err) {
         console.error("載入活動資料時發生錯誤:", err);
@@ -245,32 +251,65 @@ const ActivityDetail = () => {
   };
 
   const handleSave = async () => {
-    if (!activity || !clubId) return;
+  if (!activity || !clubId) return;
 
-    if (!validateForm()) {
-      return;
+  if (!validateForm()) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // 準備要送出的資料（根據你的後端 serializer 格式調整）
+    const payload = {
+      ...activity,
+      period: {
+        startDate: activity.period.startDate.toISOString().slice(0, 10),
+        endDate: activity.period.endDate.toISOString().slice(0, 10),
+      },
+      paymentPeriod: {
+        startDate: activity.paymentPeriod.startDate.toISOString().slice(0, 10),
+        endDate: activity.paymentPeriod.endDate.toISOString().slice(0, 10),
+      },
+      officers: officers.filter((o) => o.isSelected).map((o) => o.id),
+    };
+
+    const token = localStorage.getItem("access");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
-    try {
-      await ClubService.saveActivity(Number(clubId), activity);
-
-      console.log("儲存活動:", activity);
-      console.log(
-        "選擇的負責人:",
-        officers.filter((o) => o.isSelected)
-      );
-
-      setIsEditMode(false);
-
-      // 如果是新活動，儲存後導航回社團頁面
-      if (isNew) {
-        navigate(`/clubs/${clubId}`);
-      }
-    } catch (error) {
-      console.error("儲存活動失敗:", error);
-      setError("儲存活動時發生錯誤，請稍後再試。");
+    let url = `/api/clubs/${clubId}/events/`;
+    let method = "POST";
+    if (!isNew) {
+      url = `/api/clubs/${clubId}/events/${id}/`;
+      method = "PATCH";
     }
-  };
+
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error("儲存活動失敗");
+
+    setIsEditMode(false);
+
+    // 如果是新活動，儲存後導航回社團頁面
+    if (isNew) {
+      navigate(`/clubs/${clubId}`);
+    }
+  } catch (error) {
+    console.error("儲存活動失敗:", error);
+    setError("儲存活動時發生錯誤，請稍後再試。");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCancel = () => {
     if (isNew) {

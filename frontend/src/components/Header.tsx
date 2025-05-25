@@ -18,80 +18,72 @@ const Header = () => {
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!loginUsername || !loginPassword) return;
-  try {
-    const res = await fetch("/api/login/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: loginUsername,
-        password: loginPassword,
-      }),
-    });
-    if (!res.ok) {
-      let errorMsg = "Login failed";
-      try {
-        const errorData = await res.json();
-        if (errorData.detail) errorMsg = errorData.detail;
-        else if (typeof errorData === "object")
-          errorMsg = Object.values(errorData).flat().join("\n");
-      } catch {}
-      throw new Error(errorMsg);
+    e.preventDefault();
+    if (!loginUsername || !loginPassword) return;
+    try {
+      const res = await fetch("/api/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: loginUsername,
+          password: loginPassword,
+        }),
+      });
+      if (!res.ok) throw new Error("登入失敗");
+      const data = await res.json();
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("user_id", String(data.user.id)); // <--- 加這行
+      setIsLoggedIn(true);
+      setShowLogin(false);
+      setLoginUsername("");
+      setLoginPassword("");
+      window.location.reload();
+    } catch (err) {
+      alert("登入失敗，請檢查帳號密碼");
     }
-    const data = await res.json();
-    localStorage.setItem("access", data.access);
-    localStorage.setItem("refresh", data.refresh);
-    setIsLoggedIn(true);
-    setShowLogin(false);
-    setLoginUsername("");
-    setLoginPassword("");
-    alert("登入成功");
-  } catch (err: any) {
-    alert("登入失敗：" + (err.message || "請檢查帳號密碼"));
-  }
-};
+  };
 
   const handleRegister = async () => {
     setShowRegister(true);
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!registerUsername || !registerEmail || !registerPassword) return;
-  try {
-    const res = await fetch("/api/register/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: registerUsername,
-        email: registerEmail,
-        password: registerPassword,
-      }),
-    });
-    if (!res.ok) {
-      let errorMsg = "Registration failed";
-      try {
-        const errorData = await res.json();
-        if (errorData.detail) errorMsg = errorData.detail;
-        else if (typeof errorData === "object")
-          errorMsg = Object.values(errorData).flat().join("\n");
-      } catch {}
-      throw new Error(errorMsg);
+    e.preventDefault();
+    if (!registerUsername || !registerEmail || !registerPassword) return;
+    try {
+      const res = await fetch("/api/register/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: registerUsername,
+          email: registerEmail,
+          password: registerPassword,
+        }),
+      });
+      if (!res.ok) {
+        let errorMsg = "Registration failed";
+        try {
+          const errorData = await res.json();
+          if (errorData.detail) errorMsg = errorData.detail;
+          else if (typeof errorData === "object")
+            errorMsg = Object.values(errorData).flat().join("\n");
+        } catch { }
+        throw new Error(errorMsg);
+      }
+      setShowRegister(false);
+      setRegisterUsername("");
+      setRegisterEmail("");
+      setRegisterPassword("");
+      alert("註冊成功，請登入");
+    } catch (err: any) {
+      alert("註冊失敗：" + (err.message || "請檢查資料"));
     }
-    setShowRegister(false);
-    setRegisterUsername("");
-    setRegisterEmail("");
-    setRegisterPassword("");
-    alert("註冊成功，請登入");
-  } catch (err: any) {
-    alert("註冊失敗：" + (err.message || "請檢查資料"));
-  }
-};
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
+    localStorage.removeItem("is_admin");
     setIsLoggedIn(false);
     navigate("/");
   };

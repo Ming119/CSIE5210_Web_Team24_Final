@@ -1,7 +1,11 @@
 from rest_framework import generics, status, views
 from rest_framework.decorators import action
+from rest_framework.generics import RetrieveAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import (Club, Event, EventParticipation, FinanceRecord,
                      Membership, User)
@@ -36,13 +40,58 @@ class UserAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
   serializer_class = UserSerializer
   permission_classes = [IsAdmin]
 
+class ClubApproveView(views.APIView):
+    permission_classes = [IsAdmin]  # 只允許管理員
+
+    def post(self, request, club_id):
+        club = Club.objects.get(id=club_id)
+        action = request.data.get('action')
+        if action == 'approve':
+            club.status = 'active'
+        elif action == 'reject':
+            club.status = 'rejected'
+        elif action == 'suspend':
+            club.status = 'suspended'
+        elif action == 'disband':
+            club.status = 'disbanded'
+        else:
+            return Response({'detail': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+        club.save()
+        return Response({'status': club.status})
+
 class ClubListView(generics.ListCreateAPIView):
-  queryset = Club.objects.all()
-  serializer_class = ClubSerializer
-  permission_classes = [IsAuthenticated | AllowAny]
-  def perform_create(self, serializer):
-    club = serializer.save()
-    Membership.objects.create(user=self.request.user, club=club, is_manager=True)
+    queryset = Club.objects.all()
+    serializer_class = ClubSerializer
+    permission_classes = [AllowAny]
+
+    def perform_create(self, serializer):
+        club = serializer.save()
+        # 建立者自動成為社長
+        Membership.objects.create(
+            user=self.request.user,
+            club=club,
+            status='accepted',
+            is_manager=True,
+            position="社長"
+        )
+
+class MyClubsView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        if hasattr(user, "is_admin") and user.is_admin:
+            clubs = Club.objects.all()
+        else:
+            memberships = Membership.objects.filter(user=user)
+            clubs = Club.objects.filter(id__in=memberships.values_list('club_id', flat=True))
+        serializer = ClubSerializer(clubs, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+class ClubDetailView(RetrieveUpdateAPIView):
+    queryset = Club.objects.all()
+    serializer_class = ClubSerializer
+    permission_classes = [AllowAny]
+    
 
 class ClubJoinView(views.APIView):
   permission_classes = [IsAuthenticated]
@@ -97,3 +146,20 @@ class FinanceStatsView(views.APIView):
     records = FinanceRecord.objects.filter(club_id=club_id)
     total = sum(record.amount for record in records)
     return Response({"total": total})
+  
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        return token
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+        }
+        return data
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
