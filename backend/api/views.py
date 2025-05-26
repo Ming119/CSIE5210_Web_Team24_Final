@@ -184,12 +184,11 @@ class MembershipDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = MembershipSerializer
     permission_classes = [IsAuthenticated]
 
-class EventParticipantDetailView(generics.RetrieveUpdateAPIView):
+class EventParticipantDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = EventParticipation.objects.all()
     serializer_class = EventParticipationSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # 限定只能操作對應活動的參加者
         event_id = self.kwargs['event_id']
         return EventParticipation.objects.filter(event_id=event_id)

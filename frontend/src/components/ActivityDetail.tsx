@@ -69,7 +69,7 @@ const DataFormatter = {
 
 const ActivityDetail = () => {
   const { id, clubId } = useParams<{ id: string; clubId: string }>();
-if (!clubId) return <div>找不到 clubId</div>;
+  if (!clubId) return <div>找不到 clubId</div>;
   const navigate = useNavigate();
   const isNew = id === "new";
 
@@ -142,6 +142,11 @@ if (!clubId) return <div>找不到 clubId</div>;
 
   // 報名活動
   const handleJoinActivity = async () => {
+    // 檢查 quota
+    if (activity?.quota && confirmedCount >= activity.quota) {
+      setJoinError("人數已額滿，無法報名。");
+      return;
+    }
     setIsJoining(true);
     setJoinError(null);
     try {
@@ -210,6 +215,27 @@ if (!clubId) return <div>找不到 clubId</div>;
     }
   };
 
+  const handleManagerCancelParticipation = async (participantId: number) => {
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/events/${activity?.id}/participants/${participantId}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("取消報名失敗");
+      setParticipants((prev) => prev.filter((p) => p.id !== participantId));
+      // 如果自己被取消，也要清掉 participation
+      if (participation && participation.id === participantId) {
+        setParticipation(null);
+      }
+    } catch (err) {
+      alert("取消報名失敗，請稍後再試。");
+    }
+  };
+
   // 顯示已確認人數
   const confirmedCount = participants.filter(p => p.payment_status === "confirmed").length;
   const totalQuota = activity?.quota || 0;
@@ -217,8 +243,29 @@ if (!clubId) return <div>找不到 clubId</div>;
   // 報名資格判斷
   const canJoin =
     !!currentUserId &&
-    (activity?.is_public ||
+    activity?.status === "open" &&
+    (activity.is_public ||
       (myMembership && (myMembership.status === "accepted" || myMembership.status === "active")));
+
+  // 取消報名
+  const handleCancelParticipation = async () => {
+    if (!participation) return;
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/events/${activity?.id}/participants/${participation.id}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("取消報名失敗");
+      setParticipation(null);
+      setParticipants((prev) => prev.filter((p) => p.id !== participation.id));
+    } catch (err) {
+      alert("取消報名失敗，請稍後再試。");
+    }
+  };
 
   if (loading) return <div className="text-center">載入中...</div>;
   if (error) return <div className="alert alert-danger">{error}</div>;
@@ -296,17 +343,16 @@ if (!clubId) return <div>找不到 clubId</div>;
           <p className="mb-2 text-start">
             <b>狀態：</b>
             <span
-              className={`badge ms-0 ${
-                activity.status === "open"
-                  ? "bg-success"
-                  : activity.status === "completed"
+              className={`badge ms-0 ${activity.status === "open"
+                ? "bg-success"
+                : activity.status === "completed"
                   ? "bg-secondary"
                   : activity.status === "planning"
-                  ? "bg-primary"
-                  : activity.status === "closed"
-                  ? "bg-warning text-dark"
-                  : "bg-danger"
-              }`}
+                    ? "bg-primary"
+                    : activity.status === "closed"
+                      ? "bg-warning text-dark"
+                      : "bg-danger"
+                }`}
             >
               {DataFormatter.formatActivityStatus(activity.status)}
             </span>
@@ -324,6 +370,16 @@ if (!clubId) return <div>找不到 clubId</div>;
       {!currentUserId && (
         <div className="alert alert-warning">
           請先登入才能報名活動
+        </div>
+      )}
+      {activity.status !== "open" && (
+        <div className="alert alert-info">
+          目前活動不開放報名
+        </div>
+      )}
+      {currentUserId && !canJoin && (
+        <div className="alert alert-warning">
+          僅限社員報名此活動
         </div>
       )}
       {canJoin && !participation && currentUserId && (
@@ -368,9 +424,23 @@ if (!clubId) return <div>找不到 clubId</div>;
           {joinError && <div className="text-danger mt-2">{joinError}</div>}
         </div>
       )}
-      {currentUserId && !canJoin && (
-        <div className="alert alert-warning">
-          僅限社員報名此活動
+      {canJoin && participation && (
+        <div className="alert alert-success d-flex align-items-center justify-content-between">
+          <div>
+            <b>你已報名此活動</b>
+            {participation.payment_status === "confirmed" && (
+              <span className="ms-2 badge bg-success">已確認</span>
+            )}
+            {participation.payment_status !== "confirmed" && (
+              <span className="ms-2 badge bg-warning text-dark">待確認</span>
+            )}
+          </div>
+          <button
+            className="btn btn-outline-danger btn-sm"
+            onClick={handleCancelParticipation}
+          >
+            取消報名
+          </button>
         </div>
       )}
 
@@ -414,6 +484,13 @@ if (!clubId) return <div>找不到 clubId</div>;
                         撤銷
                       </button>
                     )}
+                    {/* 管理員可取消報名 */}
+                    <button
+                      className="btn btn-outline-danger btn-sm ms-2"
+                      onClick={() => handleManagerCancelParticipation(p.id)}
+                    >
+                      取消報名
+                    </button>
                   </td>
                 </tr>
               ))}
