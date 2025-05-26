@@ -24,7 +24,7 @@ export interface Activity {
   period: DateRange;
   paymentPeriod: DateRange;
   fee: number;
-  status: "planning" | "ongoing" | "completed" | "cancelled";
+  status: "planning" | "open" | "closed" | "completed" | "cancelled";
   paymentMethods: {
     cash: boolean;
     bankTransfer: boolean;
@@ -129,11 +129,13 @@ export class DataFormatter {
   static formatActivityStatus(status: Activity["status"]): string {
     switch (status) {
       case "planning":
-        return "規劃中";
-      case "ongoing":
-        return "進行中";
+        return "尚未接受報名";
+      case "open":
+        return "接受報名中";
+      case "closed":
+        return "已截止報名";
       case "completed":
-        return "已完結";
+        return "已結束";
       case "cancelled":
         return "已取消";
       default:
@@ -203,7 +205,7 @@ export class MockDataGenerator {
       period: { startDate, endDate },
       paymentPeriod: { startDate, endDate },
       fee: activity.fee,
-      status: index < 2 ? "ongoing" : index === 2 ? "completed" : "planning",
+      status: index < 2 ? "open" : index === 2 ? "completed" : "planning",
       paymentMethods: {
         cash: true,
         bankTransfer: true,

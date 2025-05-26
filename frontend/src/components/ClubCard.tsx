@@ -39,20 +39,29 @@ const ClubCard = ({ club }: ClubCardProps) => {
     <Link to={`/clubs/${club.id}`} className="text-decoration-none text-dark">
       <div className="d-flex align-items-start">
         <div
-          className="bg-success rounded flex-shrink-0 me-3"
-          style={{ width: "80px", height: "80px" }}
+          className="bg-success rounded flex-shrink-0 me-2"
+          style={{ width: "100px", height: "100px" }}
         ></div>
         <div className="text-start">
           <h5 className="fw-bold mb-1">
             {club.name}
-            {/* {club.status && (
-              <span className={statusClass} style={{ fontSize: "0.8em", verticalAlign: "middle" }}>
-                {statusLabel}
-              </span>
-            )} */}
           </h5>
-          <p className="mb-1">{club.description}</p>
-          <p className="text-muted mb-0">點擊查看詳情</p>
+          <p
+            className="mb-1"
+            style={{
+              maxWidth: "180px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+              whiteSpace: "normal",
+              wordBreak: "break-all",
+            }}
+            title={club.description}
+          >
+            {club.description}
+          </p>
         </div>
       </div>
     </Link>

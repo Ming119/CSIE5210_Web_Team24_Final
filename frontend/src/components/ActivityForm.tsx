@@ -254,9 +254,11 @@ const ActivityForm = ({
                   onChange={e => setStatus(e.target.value)}
                   required
                 >
-                  <option value="planning">規劃中</option>
-                  <option value="ongoing">進行中</option>
+                  <option value="planning">尚未接受報名</option>
+                  <option value="open">接受報名中</option>
+                  <option value="closed">已截止報名</option>
                   <option value="completed">已結束</option>
+                  <option value="cancelled">已取消</option>
                 </select>
               </div>
               <div className="modal-footer">

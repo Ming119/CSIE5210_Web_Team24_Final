@@ -324,115 +324,117 @@ const ClubDetail = () => {
         </div>
       </div>
       <div className="row mb-4">
-        <div className="col-md-3">
+        <div className="col-12 col-md-auto d-flex justify-content-center align-items-center mb-3 mb-md-0"
+        >
           <div
-            className="bg-success rounded"
-            style={{ width: "100%", height: "200px" }}
-          ></div>
-        </div>
-        <div className="col-md-9">
-          <div className="d-flex justify-content-between mb-4">
-            <div className="club-info text-start w-100">
-              {isEditingClubInfo ? (
-                <div>
-                  <div className="mb-3">
-                    <label htmlFor="clubName" className="form-label fw-bold">
-                      社團名稱
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="clubName"
-                      value={editedClubInfo.name}
-                      onChange={(e) =>
-                        setEditedClubInfo((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label
-                      htmlFor="clubDescription"
-                      className="form-label fw-bold"
-                    >
-                      社團描述
-                    </label>
-                    <textarea
-                      className="form-control"
-                      id="clubDescription"
-                      rows={3}
-                      value={editedClubInfo.description}
-                      onChange={(e) =>
-                        setEditedClubInfo((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                    ></textarea>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="maxMembers" className="form-label fw-bold">
-                      人數上限
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      id="maxMembers"
-                      min="1"
-                      value={editedClubInfo.maxMembers === 0 ? "" : editedClubInfo.maxMembers}
-                      onChange={(e) =>
-                        setEditedClubInfo((prev) => ({
-                          ...prev,
-                          maxMembers: e.target.value === "" ? 0 : Number(e.target.value),
-                        }))
-                      }
-                    />
-                    <div className="form-text">
-                      目前有效社員人數：{currentMemberCount} 人
-                    </div>
-                  </div>
-                  <p className="mb-2 text-start">
-                    創立日期：{clubDetail.foundationDate}
-                  </p>
-                  <p className="mb-0 text-start">
-                    社團狀態：{formatClubStatus(clubDetail.status)}
-                  </p>
-                  <div className="mt-3">
-                    <button
-                      className="btn btn-success me-2"
-                      onClick={handleSaveClubInfo}
-                    >
-                      儲存
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setIsEditingClubInfo(false)}
-                    >
-                      取消
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <h3 className="mb-3 text-start">{clubDetail.name}</h3>
-                  <p className="mb-2 text-start">{clubDetail.description}</p>
-                  <p className="mb-2 text-start">
-                    創立日期：{clubDetail.foundationDate}
-                  </p>
-                  <p className="mb-2 text-start">
-                    社團人數：{currentMemberCount}/{clubDetail.memberCount.max}
-                  </p>
-                  <p className="mb-0 text-start">
-                    社團狀態：{formatClubStatus(clubDetail.status)}
-                  </p>
-                  {/* 動態顯示加入/撤回/退出按鈕 */}
-                  <div className="mt-3">{joinButton}</div>
-                </div>
-              )}
-            </div>
+            className="bg-success rounded overflow-hidden"
+            style={{ width: "250px", height: "250px" }}
+          >
           </div>
+        </div>
+        <div className="col">
+          <div className="club-info text-start w-100"
+            style={{ minWidth: 0, wordBreak: "break-word" }}>
+            {isEditingClubInfo ? (
+              <div>
+                <div className="mb-3">
+                  <label htmlFor="clubName" className="form-label fw-bold">
+                    社團名稱
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="clubName"
+                    value={editedClubInfo.name}
+                    onChange={(e) =>
+                      setEditedClubInfo((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <label
+                    htmlFor="clubDescription"
+                    className="form-label fw-bold"
+                  >
+                    社團描述
+                  </label>
+                  <textarea
+                    className="form-control"
+                    id="clubDescription"
+                    rows={3}
+                    value={editedClubInfo.description}
+                    onChange={(e) =>
+                      setEditedClubInfo((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                  ></textarea>
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="maxMembers" className="form-label fw-bold">
+                    人數上限
+                  </label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    id="maxMembers"
+                    min="1"
+                    value={editedClubInfo.maxMembers === 0 ? "" : editedClubInfo.maxMembers}
+                    onChange={(e) =>
+                      setEditedClubInfo((prev) => ({
+                        ...prev,
+                        maxMembers: e.target.value === "" ? 0 : Number(e.target.value),
+                      }))
+                    }
+                  />
+                  <div className="form-text">
+                    目前有效社員人數：{currentMemberCount} 人
+                  </div>
+                </div>
+                <p className="mb-2 text-start">
+                  創立日期：{clubDetail.foundationDate}
+                </p>
+                <p className="mb-0 text-start">
+                  社團狀態：{formatClubStatus(clubDetail.status)}
+                </p>
+                <div className="mt-3">
+                  <button
+                    className="btn btn-success me-2"
+                    onClick={handleSaveClubInfo}
+                  >
+                    儲存
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setIsEditingClubInfo(false)}
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h3 className="mb-3 text-start">{clubDetail.name}</h3>
+                <p className="mb-2 text-start">{clubDetail.description}</p>
+                <p className="mb-2 text-start">
+                  創立日期：{clubDetail.foundationDate}
+                </p>
+                <p className="mb-2 text-start">
+                  社團人數：{currentMemberCount}/{clubDetail.memberCount.max}
+                </p>
+                <p className="mb-0 text-start">
+                  社團狀態：{formatClubStatus(clubDetail.status)}
+                </p>
+                {/* 動態顯示加入/撤回/退出按鈕 */}
+                <div className="mt-3">{joinButton}</div>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
