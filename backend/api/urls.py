@@ -51,4 +51,6 @@ urlpatterns = [
   path('clubs/<int:club_id>/approve/', views.ClubApproveView.as_view(), name='club_approve'),
   path('clubs/<int:pk>/', views.ClubDetailView.as_view(), name="club-detail"),
   path('login/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+  path('memberships/<int:pk>/', views.MembershipDetailView.as_view(), name='membership-detail'),
+  path('events/<int:event_id>/participants/<int:pk>/', views.EventParticipantDetailView.as_view(), name='event_participant_detail'),
 ]

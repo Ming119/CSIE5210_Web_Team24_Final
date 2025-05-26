@@ -10,8 +10,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import (Club, Event, EventParticipation, FinanceRecord,
                      Membership, User)
 from .permissions import CanViewEvent, IsAdmin, IsClubManager
-from .serializers import (ClubSerializer, EventSerializer,
-                          FinanceRecordSerializer, UserRegisterSerializer,
+from .serializers import (ClubSerializer, EventParticipationSerializer,
+                          EventSerializer, FinanceRecordSerializer,
+                          MembershipSerializer, UserRegisterSerializer,
                           UserSerializer)
 
 
@@ -112,19 +113,32 @@ class EventListView(generics.ListCreateAPIView):
   def perform_create(self, serializer):
     serializer.save(club_id=self.kwargs['club_id'])
 
-class EventDetailView(generics.RetrieveUpdateDestroyAPIView):
-  queryset = Event.objects.all()
-  serializer_class = EventSerializer
-  permission_classes = [CanViewEvent | (IsAuthenticated & IsClubManager)]
+class EventDetailView(generics.RetrieveUpdateAPIView):
+    queryset = Event.objects.all()
+    serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 class EventJoinView(views.APIView):
-  permission_classes = [IsAuthenticated]
-  def post(self, request, event_id):
-    event = Event.objects.get(id=event_id)
-    if event.is_public or Membership.objects.filter(user=request.user, club=event.club).exists():
-      EventParticipation.objects.get_or_create(user=request.user, event=event)
-      return Response(status=status.HTTP_200_OK)
-    return Response({"detail": "Cannot join private event of unjoined club"}, status=status.HTTP_403_FORBIDDEN)
+    permission_classes = [IsAuthenticated]
+    def post(self, request, event_id):
+        event = Event.objects.get(id=event_id)
+        payment_method = request.data.get("payment_method")
+        # 只檢查是否為該社團成員
+        if Membership.objects.filter(user=request.user, club=event.club).exists():
+            participation, created = EventParticipation.objects.get_or_create(
+                user=request.user, event=event,
+                defaults={"payment_method": payment_method}
+            )
+            if not created and payment_method:
+                participation.payment_method = payment_method
+                participation.save()
+            return Response(EventParticipationSerializer(participation).data, status=status.HTTP_200_OK)
+        return Response({"detail": "Cannot join event of unjoined club"}, status=status.HTTP_403_FORBIDDEN)
 
 class FinanceRecordListView(generics.ListCreateAPIView):
   serializer_class = FinanceRecordSerializer
@@ -164,3 +178,18 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+class MembershipDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Membership.objects.all()
+    serializer_class = MembershipSerializer
+    permission_classes = [IsAuthenticated]
+
+class EventParticipantDetailView(generics.RetrieveUpdateAPIView):
+    queryset = EventParticipation.objects.all()
+    serializer_class = EventParticipationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # 限定只能操作對應活動的參加者
+        event_id = self.kwargs['event_id']
+        return EventParticipation.objects.filter(event_id=event_id)

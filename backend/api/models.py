@@ -53,17 +53,20 @@ class Event(models.Model):
   end_date = models.DateField()
   fee = models.PositiveIntegerField(default=0)
   payment_methods = models.JSONField(default=dict)
+  is_public = models.BooleanField(default=False)
 
   @property
   def participant_count(self):
     return EventParticipation.objects.filter(event=self).count()
   
-class EventParticipation(models.Model):
-  user = models.ForeignKey(User, on_delete=models.CASCADE)
-  event = models.ForeignKey(Event, on_delete=models.CASCADE)
 
-  class Meta:
-    unique_together = ('user', 'event')
+class EventParticipation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    payment_method = models.CharField(max_length=20, blank=True, null=True)
+    payment_status = models.CharField(max_length=20, choices=[('pending', '待確認'), ('confirmed', '已確認')], default='pending')
+    class Meta:
+        unique_together = ('user', 'event')
 
 class FinanceRecord(models.Model):
   club = models.ForeignKey(Club, on_delete=models.CASCADE)

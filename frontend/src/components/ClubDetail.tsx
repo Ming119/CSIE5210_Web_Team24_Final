@@ -26,6 +26,7 @@ type Activity = {
   status: string;
   description?: string;
   payment_methods?: any;
+  is_public?: boolean;
 };
 
 type ClubDetailData = {
@@ -40,9 +41,6 @@ type ClubDetailData = {
   presidentName?: string;
 };
 
-type PaymentStatus = "unpaid" | "pending" | "paid" | "confirmed";
-
-// 職位常數
 const CLUB_POSITIONS = [
   "社長",
   "副社長",
@@ -52,7 +50,6 @@ const CLUB_POSITIONS = [
   "社員",
 ];
 
-// 幹部職位
 const MANAGER_POSITIONS = [
   "社長",
   "副社長",
@@ -60,23 +57,6 @@ const MANAGER_POSITIONS = [
   "財務幹部",
   "公關幹部",
 ];
-
-const formatClubStatus = (status: string) => {
-  switch (status) {
-    case "active":
-      return "啟用";
-    case "pending":
-      return "待審核";
-    case "rejected":
-      return "已拒絕";
-    case "suspended":
-      return "停權";
-    case "disbanded":
-      return "已解散";
-    default:
-      return status;
-  }
-};
 
 const ClubDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -98,10 +78,8 @@ const ClubDetail = () => {
 
   const fetchClubDetail = async () => {
     setLoading(true);
-    console.log("fetchClubDetail, id=", id);
     try {
       const res = await fetch(`/api/clubs/${id}/`);
-      console.log("API response:", res.status);
       if (!res.ok) throw new Error("無法取得社團資料");
       const data = await res.json();
       setClubDetail({
@@ -116,10 +94,8 @@ const ClubDetail = () => {
       setError(null);
     } catch (err) {
       setError("無法載入社團詳情。請稍後再試。");
-      console.error(err);
     } finally {
       setLoading(false);
-      console.log("setLoading(false)");
     }
   };
 
@@ -132,17 +108,18 @@ const ClubDetail = () => {
   if (error) return <div className="alert alert-danger">{error}</div>;
   if (!clubDetail) return <div className="alert alert-warning">找不到社團資訊</div>;
 
-  const currentMemberCount = clubDetail.members.filter(
-    (member) => member.status === "accepted"
-  ).length;
-
-  // 取得自己在這個社團的 membership
+  // 取得自己在這個社團的 membership（包含 pending 狀態）
   const myMembership = clubDetail.members.find(m => m.user === currentUserId);
 
   // 幹部判斷
   const isManager = myMembership &&
     (myMembership.is_manager ||
       (myMembership.position && MANAGER_POSITIONS.includes(myMembership.position)));
+
+  // 只顯示有效社員數
+  const currentMemberCount = clubDetail.members.filter(
+    (member) => member.status === "accepted"
+  ).length;
 
   // 儲存社團資訊
   const handleSaveClubInfo = async () => {
@@ -173,20 +150,29 @@ const ClubDetail = () => {
     }
   };
 
+  // 更新成員職位或狀態
   const handleUpdateMember = async (memberId: number, update: { position?: string; status?: string }) => {
     if (!clubDetail) return;
     try {
       const token = localStorage.getItem("access");
+      // 根據 position 自動設定 is_manager
+      let isManagerValue: boolean | undefined = undefined;
+      if (update.position !== undefined) {
+        isManagerValue = MANAGER_POSITIONS.includes(update.position);
+      }
+      const body: any = { ...update };
+      if (isManagerValue !== undefined) {
+        body.is_manager = isManagerValue;
+      }
       const res = await fetch(`/api/memberships/${memberId}/`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(update),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("更新失敗");
-      // 重新取得社團詳情
       await fetchClubDetail();
     } catch (err) {
       alert("更新失敗，請稍後再試。");
@@ -197,6 +183,125 @@ const ClubDetail = () => {
     setEditingActivity(activity);
     setShowEditActivity(true);
   };
+
+  // 申請加入社團
+  const handleJoinClub = async () => {
+    if (!clubDetail) return;
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/clubs/${clubDetail.id}/join/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("申請加入失敗");
+      await fetchClubDetail();
+      alert("申請已送出，請等待審核");
+    } catch (err) {
+      alert("申請加入失敗，請稍後再試。");
+    }
+  };
+
+  // 撤回申請
+  const handleWithdraw = async () => {
+    if (!myMembership) return;
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/memberships/${myMembership.id}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("撤回申請失敗");
+      await fetchClubDetail();
+      alert("已撤回申請");
+    } catch (err) {
+      alert("撤回申請失敗，請稍後再試。");
+    }
+  };
+
+  // 退出社團
+  const handleQuit = async () => {
+    if (!myMembership) return;
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/memberships/${myMembership.id}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("退出社團失敗");
+      await fetchClubDetail();
+      alert("已退出社團");
+    } catch (err) {
+      alert("退出社團失敗，請稍後再試。");
+    }
+  };
+
+  // 活動狀態顯示
+  const formatActivityStatus = (status: string) => {
+    switch (status) {
+      case "planning":
+        return "規劃中";
+      case "ongoing":
+        return "進行中";
+      case "completed":
+        return "已結束";
+      case "cancelled":
+        return "已取消";
+      default:
+        return status;
+    }
+  };
+
+  // 顯示所有成員（包含 pending 狀態）
+  const membersForTable = clubDetail.members;
+
+  // 決定顯示哪個按鈕
+  let joinButton = null;
+  if (!myMembership) {
+    joinButton = (
+      <button className="btn btn-primary" onClick={handleJoinClub}>
+        加入社團
+      </button>
+    );
+  } else if (myMembership.status === "pending") {
+    joinButton = (
+      <button className="btn btn-warning" onClick={handleWithdraw}>
+        撤回申請
+      </button>
+    );
+  } else if (myMembership.status === "accepted" || myMembership.status === "active") {
+    joinButton = (
+      <button className="btn btn-danger" onClick={handleQuit}>
+        退出社團
+      </button>
+    );
+  }
+
+  const formatClubStatus = (status: string) => {
+    switch (status) {
+      case "active":
+        return "已成立";
+      case "pending":
+        return "待審核";
+      case "rejected":
+        return "已拒絕";
+      case "suspended":
+        return "暫停營運";
+      case "disbanded":
+        return "已解散";
+      default:
+        return status;
+    }
+  };
+
 
   return (
     <div>
@@ -290,7 +395,7 @@ const ClubDetail = () => {
                     創立日期：{clubDetail.foundationDate}
                   </p>
                   <p className="mb-0 text-start">
-                    社團狀態：{clubDetail.status}
+                    社團狀態：{formatClubStatus(clubDetail.status)}
                   </p>
                   <div className="mt-3">
                     <button
@@ -318,8 +423,10 @@ const ClubDetail = () => {
                     社團人數：{currentMemberCount}/{clubDetail.memberCount.max}
                   </p>
                   <p className="mb-0 text-start">
-                    社團狀態：{clubDetail.status}
+                    社團狀態：{formatClubStatus(clubDetail.status)}
                   </p>
+                  {/* 動態顯示加入/撤回/退出按鈕 */}
+                  <div className="mt-3">{joinButton}</div>
                 </div>
               )}
             </div>
@@ -328,66 +435,68 @@ const ClubDetail = () => {
       </div>
 
       {/* 成員表格 */}
-      <div className="table-responsive mb-4">
-        <table className="table table-striped text-start">
-          <thead>
-            <tr>
-              <th>成員名稱</th>
-              <th>職位</th>
-              <th>狀態</th>
-              <th>是否幹部</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clubDetail.members.map((member) => (
-              <tr key={member.id}>
-                <td>{member.username}</td>
-                <td>
-                  {isManager ? (
-                    <select
-                      value={member.position || ""}
-                      onChange={e => handleUpdateMember(member.id, { position: e.target.value })}
-                    >
-                      <option value="">無</option>
-                      {CLUB_POSITIONS.map(pos => (
-                        <option key={pos} value={pos}>{pos}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    member.position || "-"
-                  )}
-                </td>
-                <td>
-                  {isManager ? (
-                    <select
-                      value={member.status}
-                      onChange={e => handleUpdateMember(member.id, { status: e.target.value })}
-                    >
-                      <option value="pending">待審核</option>
-                      <option value="accepted">已加入</option>
-                      <option value="rejected">已拒絕</option>
-                    </select>
-                  ) : (
-                    member.status === "active" || member.status === "accepted"
-                      ? "已加入"
-                      : member.status === "pending"
-                        ? "待審核"
-                        : member.status === "rejected"
-                          ? "已拒絕"
-                          : member.status
-                  )}
-                </td>
-                <td>
-                  {member.is_manager ||
-                    (member.position && MANAGER_POSITIONS.includes(member.position))
-                    ? "是"
-                    : "否"}
-                </td>
+      {isManager && (
+        <div className="table-responsive mb-4">
+          <table className="table table-striped text-start">
+            <thead>
+              <tr>
+                <th>成員名稱</th>
+                <th>職位</th>
+                <th>狀態</th>
+                <th>是否幹部</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {membersForTable.map((member) => (
+                <tr key={member.id}>
+                  <td>{member.username}</td>
+                  <td>
+                    {isManager ? (
+                      <select
+                        value={member.position || ""}
+                        onChange={e => handleUpdateMember(member.id, { position: e.target.value })}
+                      >
+                        <option value="">無</option>
+                        {CLUB_POSITIONS.map(pos => (
+                          <option key={pos} value={pos}>{pos}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      member.position || "-"
+                    )}
+                  </td>
+                  <td>
+                    {isManager ? (
+                      <select
+                        value={member.status}
+                        onChange={e => handleUpdateMember(member.id, { status: e.target.value })}
+                      >
+                        <option value="pending">待審核</option>
+                        <option value="accepted">已加入</option>
+                        <option value="rejected">已拒絕</option>
+                      </select>
+                    ) : (
+                      member.status === "active" || member.status === "accepted"
+                        ? "已加入"
+                        : member.status === "pending"
+                          ? "待審核"
+                          : member.status === "rejected"
+                            ? "已拒絕"
+                            : member.status
+                    )}
+                  </td>
+                  <td>
+                    {member.is_manager ||
+                      (member.position && MANAGER_POSITIONS.includes(member.position))
+                      ? "是"
+                      : "否"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* 活動表格上方新增活動按鈕 */}
       {isManager && (
@@ -401,7 +510,7 @@ const ClubDetail = () => {
         </div>
       )}
 
-      {/* 活動表格 */}
+
       <div className="table-responsive">
         <table className="table table-striped text-start">
           <thead>
@@ -411,13 +520,18 @@ const ClubDetail = () => {
               <th>費用</th>
               <th>名額</th>
               <th>狀態</th>
+              <th>公開</th>
               <th>動作</th>
             </tr>
           </thead>
           <tbody>
             {clubDetail.activities.map((activity) => (
               <tr key={activity.id}>
-                <td>{activity.name}</td>
+                <td>
+                  <Link to={`/clubs/${clubDetail.id}/activities/${activity.id}`}>
+                    {activity.name}
+                  </Link>
+                </td>
                 <td>
                   {activity.start_date && activity.end_date
                     ? `${activity.start_date} - ${activity.end_date}`
@@ -425,7 +539,8 @@ const ClubDetail = () => {
                 </td>
                 <td>{activity.fee}</td>
                 <td>{activity.quota}</td>
-                <td>{activity.status}</td>
+                <td>{formatActivityStatus(activity.status)}</td>
+                <td>{activity.is_public ? "公開" : "社內"}</td>
                 <td>
                   {isManager && (
                     <button

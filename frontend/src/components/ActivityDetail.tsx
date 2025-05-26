@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { type Member } from "../models";
 
-// 活動型別
+// 型別定義
 type PaymentMethods = {
   cash?: {
     enabled: boolean;
@@ -28,6 +28,16 @@ type Activity = {
   payment_start_date?: string;
   payment_end_date?: string;
   payment_methods?: PaymentMethods;
+  is_public?: boolean;
+};
+
+type Participation = {
+  id: number;
+  user: number;
+  username: string;
+  payment_method: string;
+  payment_status: string;
+  is_manager?: boolean;
 };
 
 interface ActivityOfficer extends Member {
@@ -46,6 +56,8 @@ const DataFormatter = {
         return "進行中";
       case "completed":
         return "已結束";
+      case "cancelled":
+        return "已取消";
       default:
         return status;
     }
@@ -72,6 +84,7 @@ const ActivityEditModal = ({
   const [bankName, setBankName] = useState(activity.payment_methods?.bankTransfer?.bank || "");
   const [accountNumber, setAccountNumber] = useState(activity.payment_methods?.bankTransfer?.accountNumber || "");
   const [accountName, setAccountName] = useState(activity.payment_methods?.bankTransfer?.accountName || "");
+  const [isPublic, setIsPublic] = useState(!!activity.is_public);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,9 +97,10 @@ const ActivityEditModal = ({
           ? { enabled: true, bank: bankName, accountNumber, accountName }
           : undefined,
       },
+      is_public: isPublic,
     }));
     // eslint-disable-next-line
-  }, [cashEnabled, cashRemark, bankEnabled, bankName, accountNumber, accountName]);
+  }, [cashEnabled, cashRemark, bankEnabled, bankName, accountNumber, accountName, isPublic]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -193,6 +207,18 @@ const ActivityEditModal = ({
                   min={0}
                 />
               </div>
+              <div className="form-check mb-3">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="isPublic"
+                  checked={isPublic}
+                  onChange={e => setIsPublic(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="isPublic">
+                  對外公開
+                </label>
+              </div>
               <label className="form-label fw-bold">繳費方式</label>
               <div className="form-check mb-2">
                 <input
@@ -272,16 +298,29 @@ const ActivityDetail = () => {
   const [loading, setLoading] = useState<boolean>(!isNew);
   const [error, setError] = useState<string | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [officers, setOfficers] = useState<ActivityOfficer[]>([]);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // 報名與參加狀態
+  const [participation, setParticipation] = useState<Participation | null>(null);
+  const [joinPaymentMethod, setJoinPaymentMethod] = useState("cash");
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<Participation[]>([]);
+  const [myMembership, setMyMembership] = useState<{ is_manager: boolean; status?: string } | null>(null);
+
+  const currentUserId = Number(localStorage.getItem("user_id") || 0);
 
   useEffect(() => {
     const fetchActivityData = async () => {
       if (!clubId) return;
       try {
         setLoading(true);
+        const token = localStorage.getItem("access");
         const res = await fetch(`/api/clubs/${clubId}/events/${id}/`, {
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         });
         if (!res.ok) throw new Error("無法取得活動資料");
         const activityData = await res.json();
@@ -289,14 +328,22 @@ const ActivityDetail = () => {
           ...activityData,
           payment_methods: activityData.payment_methods || {},
         });
-        setOfficers(
-          activityData.officers
-            ? activityData.officers.map((officer: Member) => ({
-                ...officer,
-                isSelected: true,
-              }))
-            : []
+        setParticipants(activityData.participants || []);
+        // 取得自己 membership（假設後端有回傳 my_membership，否則請從 participants 找）
+        if (activityData.my_membership) {
+          setMyMembership(activityData.my_membership);
+        } else {
+          // 從 participants 找
+          const found = (activityData.participants || []).find(
+            (p: Participation) => p.user === currentUserId
+          );
+          setMyMembership(found ? { is_manager: !!found.is_manager } : null);
+        }
+        // 取得自己參加狀態
+        const myParticipation = (activityData.participants || []).find(
+          (p: Participation) => p.user === currentUserId
         );
+        setParticipation(myParticipation || null);
         setError(null);
       } catch (err) {
         setError("無法載入活動資料。請稍後再試。");
@@ -305,7 +352,67 @@ const ActivityDetail = () => {
       }
     };
     if (!isNew) fetchActivityData();
-  }, [id, clubId, isNew]);
+  }, [id, clubId, isNew, currentUserId]);
+
+  // 幹部判斷（直接用 membership 的 is_manager 欄位）
+  const isManager = !!myMembership?.is_manager;
+
+  // 報名活動
+  const handleJoinActivity = async () => {
+    setIsJoining(true);
+    setJoinError(null);
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/events/${activity?.id}/join/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ payment_method: joinPaymentMethod }),
+      });
+      if (!res.ok) throw new Error("報名失敗");
+      const data = await res.json();
+      setParticipation(data);
+      setParticipants((prev) => [...prev, data]);
+    } catch (err) {
+      setJoinError("報名失敗，請稍後再試。");
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  // 管理員確認付款
+  const handleConfirmPayment = async (participantId: number) => {
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/events/${activity?.id}/participants/${participantId}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ payment_status: "confirmed" }),
+      });
+      if (!res.ok) throw new Error("確認失敗");
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === participantId ? { ...p, payment_status: "confirmed" } : p
+        )
+      );
+    } catch (err) {
+      alert("確認失敗，請稍後再試。");
+    }
+  };
+
+  // 顯示已確認人數
+  const confirmedCount = participants.filter(p => p.payment_status === "confirmed").length;
+  const totalQuota = activity?.quota || 0;
+
+  // 報名資格判斷
+  const canJoin =
+    activity?.is_public ||
+    (myMembership && (myMembership.status === "accepted" || myMembership.status === "active"));
 
   if (loading) return <div className="text-center">載入中...</div>;
   if (error) return <div className="alert alert-danger">{error}</div>;
@@ -316,12 +423,14 @@ const ActivityDetail = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-start m-0">活動資訊</h2>
         <div>
-          <button
-            className="btn btn-primary me-2"
-            onClick={() => setShowEditModal(true)}
-          >
-            編輯
-          </button>
+          {isManager && (
+            <button
+              className="btn btn-primary me-2"
+              onClick={() => setShowEditModal(true)}
+            >
+              編輯
+            </button>
+          )}
           <Link
             to={`/clubs/${clubId}`}
             className="btn btn-outline-secondary"
@@ -361,6 +470,11 @@ const ActivityDetail = () => {
               <div>戶名：{activity.payment_methods.bankTransfer.accountName || "-"}</div>
             </div>
           )}
+          <p className="mb-2 text-start">
+            <span className={`badge ${activity.is_public ? "bg-info" : "bg-secondary"}`}>
+              {activity.is_public ? "公開活動" : "社內限定"}
+            </span>
+          </p>
           <p className="mb-0 text-start">
             狀態：
             <span
@@ -376,17 +490,115 @@ const ActivityDetail = () => {
               {DataFormatter.formatActivityStatus(activity.status)}
             </span>
           </p>
+          {/* 額外顯示已確認人數/總名額 */}
+          <p className="mt-2 text-start">
+            <b>已確認人數：</b>
+            <span className="text-success">{confirmedCount}</span>
+            <span> / {totalQuota}</span>
+          </p>
         </div>
       </div>
+
+      {/* 報名區塊 */}
+      {canJoin && !participation && (
+        <div className="alert alert-info">
+          <h5>報名參加活動</h5>
+          {activity.fee === 0 ? (
+            <button
+              className="btn btn-primary"
+              onClick={handleJoinActivity}
+              disabled={isJoining}
+            >
+              {isJoining ? "報名中..." : "報名參加"}
+            </button>
+          ) : (
+            <>
+              {(activity.payment_methods?.cash?.enabled || activity.payment_methods?.bankTransfer?.enabled) ? (
+                <>
+                  <div className="mb-2">
+                    <label className="form-label">選擇付款方式：</label>
+                    <select
+                      className="form-select"
+                      value={joinPaymentMethod}
+                      onChange={e => setJoinPaymentMethod(e.target.value)}
+                    >
+                      {activity.payment_methods?.cash?.enabled && <option value="cash">現金</option>}
+                      {activity.payment_methods?.bankTransfer?.enabled && <option value="bank">銀行轉帳</option>}
+                    </select>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleJoinActivity}
+                    disabled={isJoining}
+                  >
+                    {isJoining ? "報名中..." : "報名參加"}
+                  </button>
+                </>
+              ) : (
+                <div className="text-danger">尚未設定繳費方式，請聯絡主辦人</div>
+              )}
+            </>
+          )}
+          {joinError && <div className="text-danger mt-2">{joinError}</div>}
+        </div>
+      )}
+      {!canJoin && (
+        <div className="alert alert-warning">
+          僅限社員報名此活動
+        </div>
+      )}
+
+      {/* 參加者列表 */}
+      {participants.length > 0 && (
+        <div className="mt-4">
+          <h5>參加者列表</h5>
+          <table className="table table-bordered">
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>付款方式</th>
+                <th>付款狀態</th>
+                {isManager && <th>操作</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {participants.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.username}</td>
+                  <td>{p.payment_method === "cash" ? "現金" : "銀行轉帳"}</td>
+                  <td>
+                    {p.payment_status === "confirmed"
+                      ? <span className="badge bg-success">已確認</span>
+                      : <span className="badge bg-warning text-dark">待確認</span>
+                    }
+                  </td>
+                  {isManager && (
+                    <td>
+                      {p.payment_status !== "confirmed" && (
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={() => handleConfirmPayment(p.id)}
+                        >
+                          確認
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* 編輯 Modal */}
       {showEditModal && (
         <ActivityEditModal
           activity={activity}
           clubId={clubId}
-          officers={officers}
+          officers={[]} // 不再用 officers 判斷權限
           onClose={() => setShowEditModal(false)}
           onSuccess={() => {
-            // 重新 fetch 活動資料
             window.location.reload();
           }}
         />

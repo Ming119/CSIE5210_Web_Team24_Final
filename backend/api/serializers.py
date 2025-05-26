@@ -45,25 +45,42 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 class MembershipSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
+
     class Meta:
         model = Membership
         fields = ["id", "user", "username", "club", "status", "is_manager", "position"]
 
+
 class EventSerializer(serializers.ModelSerializer):
+    participants = serializers.SerializerMethodField()
+    my_membership = serializers.SerializerMethodField()
+
+    def get_participants(self, obj):
+        participations = obj.eventparticipation_set.all()
+        return EventParticipationSerializer(participations, many=True).data
+
+    def get_my_membership(self, obj):
+        user = self.context.get("request").user
+        if not user or user.is_anonymous:
+            return None
+        membership = Membership.objects.filter(user=user, club=obj.club).first()
+        if not membership:
+            return None
+        return {
+            "is_manager": membership.is_manager,
+            "user": membership.user_id,
+            "club": membership.club_id,
+            "status": membership.status,
+        }
+
     class Meta:
         model = Event
         fields = [
-            "id",
-            "name",
-            "description",
-            "fee",
-            "quota",
-            "status",
-            "start_date",
-            "end_date",
-            "club",
+            "id", "name", "description", "fee", "quota", "status",
+            "start_date", "end_date", "club", "payment_methods",
+            "participants", "my_membership"
         ]
-        read_only_fields = ("club",)
+
 
 class ClubSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
@@ -72,10 +89,13 @@ class ClubSerializer(serializers.ModelSerializer):
     presidentName = serializers.SerializerMethodField()
 
     def get_members(self, obj):
-        return MembershipSerializer(obj.membership_set.filter(status="accepted"), many=True).data
+        # 回傳所有 membership，不只 accepted
+        memberships = obj.membership_set.all()  # 不要加 filter(status='accepted')
+        return MembershipSerializer(memberships, many=True).data
 
     def get_activities(self, obj):
-        return EventSerializer(obj.event_set.all(), many=True).data
+        # 傳遞 context，讓 EventSerializer 能取得 request
+        return EventSerializer(obj.event_set.all(), many=True, context=self.context).data
 
     def get_memberCount(self, obj):
         return {
@@ -84,24 +104,40 @@ class ClubSerializer(serializers.ModelSerializer):
         }
 
     def get_presidentName(self, obj):
-        president = obj.membership_set.filter(is_manager=True, status="accepted").first()
+        president = obj.membership_set.filter(
+            is_manager=True, status="accepted"
+        ).first()
         return president.user.username if president else None
 
     class Meta:
         model = Club
         fields = [
-            "id", "name", "description", "status", "foundation_date",
-            "memberCount", "members", "activities", "presidentName", "max_member"
+            "id",
+            "name",
+            "description",
+            "status",
+            "foundation_date",
+            "memberCount",
+            "members",
+            "activities",
+            "presidentName",
+            "max_member",
         ]
 
+
 class EventParticipationSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
-    event = serializers.PrimaryKeyRelatedField(read_only=True)
+    username = serializers.CharField(source="user.username", read_only=True)
+    is_manager = serializers.SerializerMethodField()
+
+    def get_is_manager(self, obj):
+        # 判斷該 user 是否為該活動所屬社團的幹部
+        return Membership.objects.filter(
+            user=obj.user, club=obj.event.club, is_manager=True, status="accepted"
+        ).exists()
 
     class Meta:
         model = EventParticipation
-        fields = ["id", "user", "event"]
-        read_only_fields = ["user", "event"]
+        fields = ["id", "user", "username", "payment_method", "payment_status", "is_manager"]
 
 
 class FinanceRecordSerializer(serializers.ModelSerializer):
