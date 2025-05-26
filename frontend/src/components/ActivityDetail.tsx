@@ -308,7 +308,9 @@ const ActivityDetail = () => {
   const [participants, setParticipants] = useState<Participation[]>([]);
   const [myMembership, setMyMembership] = useState<{ is_manager: boolean; status?: string } | null>(null);
 
-  const currentUserId = Number(localStorage.getItem("user_id") || 0);
+  // 允許未登入（user_id 可能為 0）
+  const userIdStr = localStorage.getItem("user_id");
+  const currentUserId = userIdStr && userIdStr !== "0" ? Number(userIdStr) : null;
 
   useEffect(() => {
     const fetchActivityData = async () => {
@@ -329,21 +331,24 @@ const ActivityDetail = () => {
           payment_methods: activityData.payment_methods || {},
         });
         setParticipants(activityData.participants || []);
-        // 取得自己 membership（假設後端有回傳 my_membership，否則請從 participants 找）
-        if (activityData.my_membership) {
-          setMyMembership(activityData.my_membership);
-        } else {
-          // 從 participants 找
-          const found = (activityData.participants || []).find(
+        // 只有登入時才找 membership/participation
+        if (currentUserId) {
+          if (activityData.my_membership) {
+            setMyMembership(activityData.my_membership);
+          } else {
+            const found = (activityData.participants || []).find(
+              (p: Participation) => p.user === currentUserId
+            );
+            setMyMembership(found ? { is_manager: !!found.is_manager } : null);
+          }
+          const myParticipation = (activityData.participants || []).find(
             (p: Participation) => p.user === currentUserId
           );
-          setMyMembership(found ? { is_manager: !!found.is_manager } : null);
+          setParticipation(myParticipation || null);
+        } else {
+          setMyMembership(null);
+          setParticipation(null);
         }
-        // 取得自己參加狀態
-        const myParticipation = (activityData.participants || []).find(
-          (p: Participation) => p.user === currentUserId
-        );
-        setParticipation(myParticipation || null);
         setError(null);
       } catch (err) {
         setError("無法載入活動資料。請稍後再試。");
@@ -405,14 +410,37 @@ const ActivityDetail = () => {
     }
   };
 
+  const handleRevokePayment = async (participantId: number) => {
+    try {
+      const token = localStorage.getItem("access");
+      const res = await fetch(`/api/events/${activity?.id}/participants/${participantId}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ payment_status: "pending" }),
+      });
+      if (!res.ok) throw new Error("撤銷失敗");
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === participantId ? { ...p, payment_status: "pending" } : p
+        )
+      );
+    } catch (err) {
+      alert("撤銷失敗，請稍後再試。");
+    }
+  };
+
   // 顯示已確認人數
   const confirmedCount = participants.filter(p => p.payment_status === "confirmed").length;
   const totalQuota = activity?.quota || 0;
 
   // 報名資格判斷
   const canJoin =
-    activity?.is_public ||
-    (myMembership && (myMembership.status === "accepted" || myMembership.status === "active"));
+    !!currentUserId &&
+    (activity?.is_public ||
+      (myMembership && (myMembership.status === "accepted" || myMembership.status === "active")));
 
   if (loading) return <div className="text-center">載入中...</div>;
   if (error) return <div className="alert alert-danger">{error}</div>;
@@ -433,7 +461,7 @@ const ActivityDetail = () => {
           )}
           <Link
             to={`/clubs/${clubId}`}
-            className="btn btn-outline-secondary"
+            className="btn btn-outline-secondary me-2"
           >
             返回社團頁面
           </Link>
@@ -443,7 +471,17 @@ const ActivityDetail = () => {
       <div className="row mb-5">
         <div className="col-md-9">
           <h3 className="mb-3 text-start">{activity.name}</h3>
-          <p className="mb-3 text-start">{activity.description}</p>
+          <p
+            className="mb-3 text-start"
+            style={{
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              maxWidth: "100%",
+              overflowWrap: "break-word",
+            }}
+          >
+            {activity.description}
+          </p>
           <p className="mb-2 text-start">
             金額：{DataFormatter.formatCurrency(activity.fee)}
           </p>
@@ -500,7 +538,12 @@ const ActivityDetail = () => {
       </div>
 
       {/* 報名區塊 */}
-      {canJoin && !participation && (
+      {!currentUserId && (
+        <div className="alert alert-warning">
+          請先登入才能報名活動
+        </div>
+      )}
+      {canJoin && !participation && currentUserId && (
         <div className="alert alert-info">
           <h5>報名參加活動</h5>
           {activity.fee === 0 ? (
@@ -542,14 +585,14 @@ const ActivityDetail = () => {
           {joinError && <div className="text-danger mt-2">{joinError}</div>}
         </div>
       )}
-      {!canJoin && (
+      {currentUserId && !canJoin && (
         <div className="alert alert-warning">
           僅限社員報名此活動
         </div>
       )}
 
       {/* 參加者列表 */}
-      {participants.length > 0 && (
+      {isManager && participants.length > 0 && (
         <div className="mt-4">
           <h5>參加者列表</h5>
           <table className="table table-bordered">
@@ -558,7 +601,7 @@ const ActivityDetail = () => {
                 <th>姓名</th>
                 <th>付款方式</th>
                 <th>付款狀態</th>
-                {isManager && <th>操作</th>}
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -572,18 +615,23 @@ const ActivityDetail = () => {
                       : <span className="badge bg-warning text-dark">待確認</span>
                     }
                   </td>
-                  {isManager && (
-                    <td>
-                      {p.payment_status !== "confirmed" && (
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={() => handleConfirmPayment(p.id)}
-                        >
-                          確認
-                        </button>
-                      )}
-                    </td>
-                  )}
+                  <td>
+                    {p.payment_status !== "confirmed" ? (
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={() => handleConfirmPayment(p.id)}
+                      >
+                        確認
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => handleRevokePayment(p.id)}
+                      >
+                        撤銷
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

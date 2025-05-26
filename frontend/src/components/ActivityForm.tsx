@@ -143,19 +143,19 @@ const ActivityForm = ({
             <h5 className="modal-title">{mode === "edit" ? "編輯活動" : "建立新活動"}</h5>
             <button type="button" className="btn-close" onClick={onClose} disabled={isSubmitting}></button>
           </div>
-          <div className="modal-body">
+          <div className="modal-body text-start">
             {error && <div className="alert alert-danger">{error}</div>}
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label className="form-label">活動名稱</label>
+                <label className="form-label fw-bold">活動名稱</label>
                 <input className="form-control" value={name} onChange={e => setName(e.target.value)} required />
               </div>
               <div className="mb-3">
-                <label className="form-label">活動描述</label>
+                <label className="form-label fw-bold">活動描述</label>
                 <textarea className="form-control" value={description} onChange={e => setDescription(e.target.value)} />
               </div>
               <div className="mb-3">
-                <label className="form-label">開始日期</label>
+                <label className="form-label fw-bold">開始日期</label>
                 <input
                   type="date"
                   className="form-control"
@@ -165,7 +165,7 @@ const ActivityForm = ({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">結束日期</label>
+                <label className="form-label fw-bold">結束日期</label>
                 <input
                   type="date"
                   className="form-control"
@@ -175,7 +175,7 @@ const ActivityForm = ({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">費用</label>
+                <label className="form-label fw-bold">費用</label>
                 <input type="number" className="form-control" value={fee} onChange={e => setFee(Number(e.target.value))} min={0} />
               </div>
               <label className="form-label fw-bold">繳費方式</label>
@@ -187,7 +187,7 @@ const ActivityForm = ({
                   checked={cashEnabled}
                   onChange={e => setCashEnabled(e.target.checked)}
                 />
-                <label className="form-check-label" htmlFor="cash">
+                <label className="form-check-label fw-bold" htmlFor="cash">
                   現金
                 </label>
               </div>
@@ -209,7 +209,7 @@ const ActivityForm = ({
                   checked={bankEnabled}
                   onChange={e => setBankEnabled(e.target.checked)}
                 />
-                <label className="form-check-label" htmlFor="bankTransfer">
+                <label className="form-check-label fw-bold" htmlFor="bankTransfer">
                   銀行轉帳
                 </label>
               </div>
@@ -236,7 +236,7 @@ const ActivityForm = ({
                 </div>
               )}
               <div className="mb-3">
-                <label className="form-label">人數上限</label>
+                <label className="form-label fw-bold">人數上限</label>
                 <input
                   type="number"
                   className="form-control"
@@ -247,7 +247,7 @@ const ActivityForm = ({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">活動狀態</label>
+                <label className="form-label fw-bold">活動狀態</label>
                 <select
                   className="form-control"
                   value={status}

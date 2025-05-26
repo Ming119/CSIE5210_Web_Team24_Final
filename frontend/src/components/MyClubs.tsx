@@ -37,13 +37,13 @@ const DataFormatter = {
   formatClubStatus: (status: string) => {
     switch (status) {
       case "active":
-        return "啟用";
+        return "營運中";
       case "pending":
         return "待審核";
       case "rejected":
         return "已拒絕";
       case "suspended":
-        return "停權";
+        return "暫停營運";
       case "disbanded":
         return "已解散";
       default:
@@ -254,11 +254,11 @@ const MyClubs = () => {
                     <td>
                       {(() => {
                         const myMembership = club.members?.find((m) => m.user === currentUserId);
-                        return myMembership
-                          ? myMembership.position ||
-                            myMembership.username ||
-                            (myMembership.is_manager ? "社長" : "社員")
-                          : "-";
+                        if (!myMembership) return "-";
+                        if (myMembership.status === "rejected") return "已拒絕";
+                        return myMembership.position ||
+                          myMembership.username ||
+                          (myMembership.is_manager ? "社長" : "社員");
                       })()}
                     </td>
                     <td>

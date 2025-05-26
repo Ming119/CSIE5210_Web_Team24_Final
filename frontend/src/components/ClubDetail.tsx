@@ -248,9 +248,11 @@ const ClubDetail = () => {
   const formatActivityStatus = (status: string) => {
     switch (status) {
       case "planning":
-        return "規劃中";
-      case "ongoing":
-        return "進行中";
+        return "尚未接受報名";
+      case "open":
+        return "接受報名中";
+      case "closed":
+        return "已截止報名";
       case "completed":
         return "已結束";
       case "cancelled":
@@ -288,7 +290,7 @@ const ClubDetail = () => {
   const formatClubStatus = (status: string) => {
     switch (status) {
       case "active":
-        return "已成立";
+        return "營運中";
       case "pending":
         return "待審核";
       case "rejected":
@@ -308,17 +310,17 @@ const ClubDetail = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-start m-0">社團資訊</h2>
         <div>
-          <Link to="/" className="btn btn-outline-secondary me-2">
-            返回社團列表
-          </Link>
           {isManager && !isEditingClubInfo && (
             <button
-              className="btn btn-primary"
+              className="btn btn-primary me-2"
               onClick={() => setIsEditingClubInfo(true)}
             >
               編輯
             </button>
           )}
+          <Link to="/" className="btn btn-outline-secondary me-2">
+            返回社團列表
+          </Link>
         </div>
       </div>
       <div className="row mb-4">
@@ -474,6 +476,7 @@ const ClubDetail = () => {
                         <option value="pending">待審核</option>
                         <option value="accepted">已加入</option>
                         <option value="rejected">已拒絕</option>
+                        <option value="left">已退出</option>
                       </select>
                     ) : (
                       member.status === "active" || member.status === "accepted"
@@ -482,7 +485,9 @@ const ClubDetail = () => {
                           ? "待審核"
                           : member.status === "rejected"
                             ? "已拒絕"
-                            : member.status
+                            : member.status === "left"
+                              ? "已退出"
+                              : member.status
                     )}
                   </td>
                   <td>
@@ -516,12 +521,13 @@ const ClubDetail = () => {
           <thead>
             <tr>
               <th>活動名稱</th>
+              <th>內容</th>
               <th>日期</th>
               <th>費用</th>
               <th>名額</th>
               <th>狀態</th>
               <th>公開</th>
-              <th>動作</th>
+              {isManager && <th>操作</th>}
             </tr>
           </thead>
           <tbody>
@@ -532,6 +538,18 @@ const ClubDetail = () => {
                     {activity.name}
                   </Link>
                 </td>
+                <td
+                  style={{
+                    maxWidth: 200,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-all",
+                  }}
+                  title={activity.description}
+                >
+                  {activity.description && activity.description.length > 30
+                    ? activity.description.slice(0, 30) + "..."
+                    : activity.description}
+                </td>
                 <td>
                   {activity.start_date && activity.end_date
                     ? `${activity.start_date} - ${activity.end_date}`
@@ -541,16 +559,16 @@ const ClubDetail = () => {
                 <td>{activity.quota}</td>
                 <td>{formatActivityStatus(activity.status)}</td>
                 <td>{activity.is_public ? "公開" : "社內"}</td>
-                <td>
-                  {isManager && (
+                {isManager && (
+                  <td>
                     <button
                       className="btn btn-primary btn-sm"
                       onClick={() => handleEditActivity(activity)}
                     >
                       編輯
                     </button>
-                  )}
-                </td>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

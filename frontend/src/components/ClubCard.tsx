@@ -11,7 +11,7 @@ const ClubCard = ({ club }: ClubCardProps) => {
   let statusClass = "badge ms-2 ";
   switch (club.status) {
     case "active":
-      statusLabel = "已成立";
+      statusLabel = "營運中";
       statusClass += "bg-success";
       break;
     case "pending":
@@ -45,11 +45,11 @@ const ClubCard = ({ club }: ClubCardProps) => {
         <div className="text-start">
           <h5 className="fw-bold mb-1">
             {club.name}
-            {club.status && (
+            {/* {club.status && (
               <span className={statusClass} style={{ fontSize: "0.8em", verticalAlign: "middle" }}>
                 {statusLabel}
               </span>
-            )}
+            )} */}
           </h5>
           <p className="mb-1">{club.description}</p>
           <p className="text-muted mb-0">點擊查看詳情</p>

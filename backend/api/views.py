@@ -116,7 +116,7 @@ class EventListView(generics.ListCreateAPIView):
 class EventDetailView(generics.RetrieveUpdateAPIView):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
