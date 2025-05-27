@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
 
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!localStorage.getItem("access"));
@@ -11,7 +10,47 @@ const Header = () => {
   const [registerUsername, setRegisterUsername] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
+  const [username, setUsername] = useState<string | null>(null); // 新增 username 狀態
   const navigate = useNavigate();
+
+  // 取得 username，並在 session 無效時自動 reset header 狀態
+  useEffect(() => {
+    if (isLoggedIn) {
+      const stored = localStorage.getItem("username");
+      if (stored) {
+        setUsername(stored);
+      } else {
+        fetch("/api/me/", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access")}`,
+            "Content-Type": "application/json",
+          },
+        })
+          .then(res => {
+            if (res.status === 401 || res.status === 403) {
+              // session 無效，重設 header 狀態
+              localStorage.removeItem("access");
+              localStorage.removeItem("refresh");
+              localStorage.removeItem("is_admin");
+              localStorage.removeItem("username");
+              setIsLoggedIn(false);
+              setUsername(null);
+              return null;
+            }
+            return res.ok ? res.json() : null;
+          })
+          .then(data => {
+            if (data && data.username) {
+              setUsername(data.username);
+              localStorage.setItem("username", data.username);
+            }
+          });
+      }
+    } else {
+      setUsername(null);
+      localStorage.removeItem("username");
+    }
+  }, [isLoggedIn]);
 
   const handleLogin = async () => {
     setShowLogin(true);
@@ -31,15 +70,15 @@ const Header = () => {
       });
       if (!res.ok) throw new Error("登入失敗");
       const data = await res.json();
-      console.log("login API response:", data); 
       localStorage.setItem("access", data.access);
       localStorage.setItem("user_id", String(data.user.id));
       localStorage.setItem("is_admin", String(data.user.is_admin));
+      localStorage.setItem("username", data.user.username); // 存 username
+      setUsername(data.user.username); // 設定 username 狀態
       setIsLoggedIn(true);
       setShowLogin(false);
       setLoginUsername("");
       setLoginPassword("");
-      // window.location.reload();
     } catch (err) {
       alert("登入失敗，請檢查帳號密碼");
     }
@@ -86,7 +125,9 @@ const Header = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     localStorage.removeItem("is_admin");
+    localStorage.removeItem("username");
     setIsLoggedIn(false);
+    setUsername(null);
     navigate("/");
   };
 
@@ -94,8 +135,14 @@ const Header = () => {
     <>
       <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 py-2">
         <div className="container-fluid">
-          <Link className="navbar-brand fw-bold" to="/">
+          <Link className="navbar-brand fw-bold d-flex align-items-center" to="/">
             NTU社團管理平台
+            {isLoggedIn && username && (
+              <span className="ms-3 text-primary fw-normal" style={{ fontSize: "1rem" }}>
+                <i className="bi bi-person-circle me-1" aria-hidden="true"></i>
+                {username}
+              </span>
+            )}
           </Link>
           <div className="d-flex">
             {isLoggedIn ? (

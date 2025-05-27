@@ -47,7 +47,7 @@ const ClubCard = ({ club }: ClubCardProps) => {
             {club.name}
           </h5>
           <p
-            className="mb-1"
+            className="mb-0"
             style={{
               maxWidth: "180px",
               overflow: "hidden",
