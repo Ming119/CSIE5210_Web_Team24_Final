@@ -15,6 +15,7 @@ interface ActivityFormProps {
     start_date?: string;
     end_date?: string;
     payment_methods?: any;
+    is_public?: boolean;
   };
 }
 
@@ -32,6 +33,7 @@ const ActivityForm = ({
   const [status, setStatus] = useState(initialData?.status || "planning");
   const [startDate, setStartDate] = useState(initialData?.start_date || "");
   const [endDate, setEndDate] = useState(initialData?.end_date || "");
+  const [isPublic, setIsPublic] = useState(initialData?.is_public ?? false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -123,6 +125,8 @@ const ActivityForm = ({
           start_date: startDate,
           end_date: endDate,
           payment_methods,
+          club: clubId,
+          is_public: isPublic,
         }),
       });
       if (!res.ok) throw new Error(mode === "edit" ? "更新活動失敗" : "建立活動失敗");
@@ -176,64 +180,75 @@ const ActivityForm = ({
               </div>
               <div className="mb-3">
                 <label className="form-label fw-bold">費用</label>
-                <input type="number" className="form-control" value={fee} onChange={e => setFee(Number(e.target.value))} min={0} />
-              </div>
-              <label className="form-label fw-bold">繳費方式</label>
-              <div className="form-check mb-2">
                 <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="cash"
-                  checked={cashEnabled}
-                  onChange={e => setCashEnabled(e.target.checked)}
+                  type="number"
+                  className="form-control"
+                  value={fee}
+                  onChange={e => setFee(Number(e.target.value))}
+                  min={0}
+                  required
                 />
-                <label className="form-check-label fw-bold" htmlFor="cash">
-                  現金
-                </label>
               </div>
-              {cashEnabled && (
-                <div className="mb-2 ms-4">
-                  <input
-                    className="form-control"
-                    placeholder="現金繳費說明（如：請於活動現場繳交）"
-                    value={cashRemark}
-                    onChange={e => setCashRemark(e.target.value)}
-                  />
-                </div>
-              )}
-              <div className="form-check mb-2">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="bankTransfer"
-                  checked={bankEnabled}
-                  onChange={e => setBankEnabled(e.target.checked)}
-                />
-                <label className="form-check-label fw-bold" htmlFor="bankTransfer">
-                  銀行轉帳
-                </label>
-              </div>
-              {bankEnabled && (
-                <div className="mb-2 ms-4">
-                  <input
-                    className="form-control mb-1"
-                    placeholder="銀行名稱"
-                    value={bankName}
-                    onChange={e => setBankName(e.target.value)}
-                  />
-                  <input
-                    className="form-control mb-1"
-                    placeholder="帳號"
-                    value={accountNumber}
-                    onChange={e => setAccountNumber(e.target.value)}
-                  />
-                  <input
-                    className="form-control"
-                    placeholder="戶名"
-                    value={accountName}
-                    onChange={e => setAccountName(e.target.value)}
-                  />
-                </div>
+              {fee > 0 && (
+                <>
+                  <label className="form-label fw-bold">繳費方式</label>
+                  <div className="form-check mb-2">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="cash"
+                      checked={cashEnabled}
+                      onChange={e => setCashEnabled(e.target.checked)}
+                    />
+                    <label className="form-check-label fw-bold" htmlFor="cash">
+                      現金
+                    </label>
+                  </div>
+                  {cashEnabled && (
+                    <div className="mb-2 ms-4">
+                      <input
+                        className="form-control"
+                        placeholder="現金繳費說明（如：請於活動現場繳交）"
+                        value={cashRemark}
+                        onChange={e => setCashRemark(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  <div className="form-check mb-2">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="bankTransfer"
+                      checked={bankEnabled}
+                      onChange={e => setBankEnabled(e.target.checked)}
+                    />
+                    <label className="form-check-label fw-bold" htmlFor="bankTransfer">
+                      銀行轉帳
+                    </label>
+                  </div>
+                  {bankEnabled && (
+                    <div className="mb-2 ms-4">
+                      <input
+                        className="form-control mb-1"
+                        placeholder="銀行名稱"
+                        value={bankName}
+                        onChange={e => setBankName(e.target.value)}
+                      />
+                      <input
+                        className="form-control mb-1"
+                        placeholder="帳號"
+                        value={accountNumber}
+                        onChange={e => setAccountNumber(e.target.value)}
+                      />
+                      <input
+                        className="form-control"
+                        placeholder="戶名"
+                        value={accountName}
+                        onChange={e => setAccountName(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </>
               )}
               <div className="mb-3">
                 <label className="form-label fw-bold">人數上限</label>
@@ -245,6 +260,37 @@ const ActivityForm = ({
                   min={1}
                   required
                 />
+              </div>
+              <div className="mb-3">
+                <label className="form-label fw-bold">活動對象</label>
+                <div>
+                  <div className="form-check form-check-inline">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      id="public"
+                      name="isPublic"
+                      checked={isPublic}
+                      onChange={() => setIsPublic(true)}
+                    />
+                    <label className="form-check-label" htmlFor="public">
+                      公開活動
+                    </label>
+                  </div>
+                  <div className="form-check form-check-inline">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      id="private"
+                      name="isPublic"
+                      checked={!isPublic}
+                      onChange={() => setIsPublic(false)}
+                    />
+                    <label className="form-check-label" htmlFor="private">
+                      社內限定
+                    </label>
+                  </div>
+                </div>
               </div>
               <div className="mb-3">
                 <label className="form-label fw-bold">活動狀態</label>

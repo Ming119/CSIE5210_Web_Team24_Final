@@ -45,19 +45,27 @@ def make_disbanded(modeladmin, request, queryset):
 
 class ClubAdmin(admin.ModelAdmin):
     list_display = (
-    "name",
-    "description",
-    "max_member",
-    "status",
-    "foundation_date",
-    "image_tag",
-)
+        "name",
+        "description",
+        "max_member",
+        "status",
+        "foundation_date",
+        "image_tag",
+    )
     search_fields = ("name",)
     inlines = [MembershipInline]
     actions = [make_active, make_pending, make_rejected, make_suspended, make_disbanded]
     fields = ("name", "description", "max_member", "status", "foundation_date", "image")
     readonly_fields = ("foundation_date", "image_tag")
-    fields = ("name", "description", "max_member", "status", "foundation_date", "image", "image_tag")
+    fields = (
+        "name",
+        "description",
+        "max_member",
+        "status",
+        "foundation_date",
+        "image",
+        "image_tag",
+    )
 
     def image_tag(self, obj):
         if obj.image:
@@ -82,13 +90,15 @@ class EventAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "club",
-        "status",
         "start_date",
         "end_date",
         "fee",
         "quota",
+        "status",
+        "is_public",
+        "payment_methods",
     )
-    list_filter = ("status", "club", "start_date", "end_date")
+    list_filter = ("status", "club", "start_date", "end_date", "is_public")
     search_fields = ("name", "club__name", "description")
     fields = (
         "name",
@@ -99,7 +109,15 @@ class EventAdmin(admin.ModelAdmin):
         "end_date",
         "fee",
         "quota",
+        "is_public",
+        "payment_methods",
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        # payment_methods is readonly if fee is 0 (free event)
+        if obj and obj.fee == 0:
+            return super().get_readonly_fields(request, obj) + ("payment_methods",)
+        return super().get_readonly_fields(request, obj)
 
 
 # Custom admin class for EventParticipation model

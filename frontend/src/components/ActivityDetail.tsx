@@ -145,7 +145,6 @@ const ActivityDetail = () => {
 
   // 報名活動
   const handleJoinActivity = async () => {
-    // 檢查 quota
     if (activity?.quota && confirmedCount >= activity.quota) {
       setJoinError("人數已額滿，無法報名。");
       return;
@@ -154,13 +153,17 @@ const ActivityDetail = () => {
     setJoinError(null);
     try {
       const token = localStorage.getItem("access");
+      const body: any = {};
+      if (activity?.fee && activity.fee > 0) {
+        body.payment_method = joinPaymentMethod;
+      }
       const res = await fetch(`/api/events/${activity?.id}/join/`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ payment_method: joinPaymentMethod }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("報名失敗");
       const data = await res.json();
@@ -406,6 +409,7 @@ const ActivityDetail = () => {
                       className="form-select"
                       value={joinPaymentMethod}
                       onChange={e => setJoinPaymentMethod(e.target.value)}
+                      required
                     >
                       {activity.payment_methods?.cash?.enabled && <option value="cash">現金</option>}
                       {activity.payment_methods?.bankTransfer?.enabled && <option value="bank">銀行轉帳</option>}

@@ -71,7 +71,7 @@ class Event(models.Model):
     end_date = models.DateField()
     fee = models.PositiveIntegerField(default=0)
     payment_methods = models.JSONField(default=dict)
-    is_public = models.BooleanField(default=False)
+    is_public = models.BooleanField(default=False, verbose_name="公開活動")
 
     @property
     def participant_count(self):

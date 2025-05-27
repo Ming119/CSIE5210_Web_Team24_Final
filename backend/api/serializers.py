@@ -124,6 +124,7 @@ class EventSerializer(serializers.ModelSerializer):
             "payment_methods",
             "participants",
             "my_membership",
+            "is_public",
         ]
 
 
