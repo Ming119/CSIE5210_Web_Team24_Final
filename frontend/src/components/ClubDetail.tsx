@@ -40,6 +40,7 @@ type ClubDetailData = {
   members: Member[];
   activities: Activity[];
   presidentName?: string;
+  image?: string;
 };
 
 const CLUB_POSITIONS = [
@@ -74,6 +75,7 @@ const ClubDetail = () => {
   const [showCreateActivity, setShowCreateActivity] = useState(false);
   const [showEditActivity, setShowEditActivity] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [editedImage, setEditedImage] = useState<File | null>(null);
 
   const currentUserId = Number(localStorage.getItem("user_id") || 0);
 
@@ -127,17 +129,19 @@ const ClubDetail = () => {
     if (!clubDetail) return;
     try {
       const token = localStorage.getItem("access");
+      const formData = new FormData();
+      formData.append("name", editedClubInfo.name);
+      formData.append("description", editedClubInfo.description);
+      formData.append("max_member", String(editedClubInfo.maxMembers));
+      if (editedImage) formData.append("image", editedImage);
+
       const res = await fetch(`/api/clubs/${clubDetail.id}/`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          // 不要加 Content-Type，讓瀏覽器自動帶 boundary
         },
-        body: JSON.stringify({
-          name: editedClubInfo.name,
-          description: editedClubInfo.description,
-          max_member: editedClubInfo.maxMembers,
-        }),
+        body: formData,
       });
       if (!res.ok) throw new Error("儲存失敗");
       const data = await res.json();
@@ -146,6 +150,7 @@ const ClubDetail = () => {
         foundationDate: data.foundation_date,
       });
       setIsEditingClubInfo(false);
+      setEditedImage(null);
     } catch (err) {
       alert("儲存失敗，請稍後再試。");
     }
@@ -327,17 +332,67 @@ const ClubDetail = () => {
       <div className="row mb-4">
         <div className="col-12 col-md-auto d-flex justify-content-center align-items-center mb-3 mb-md-0"
         >
-          <div
-            className="bg-success rounded overflow-hidden"
-            style={{ width: "250px", height: "250px" }}
-          >
-          </div>
+          {clubDetail.image ? (
+            <img
+              src={
+                clubDetail.image.startsWith("http")
+                  ? clubDetail.image
+                  : `${import.meta.env.VITE_API_URL || ""}${clubDetail.image}`
+              }
+              alt="社團圖片"
+              className="bg-success rounded overflow-hidden"
+              style={{ width: "250px", height: "250px", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              className="bg-secondary rounded overflow-hidden d-flex align-items-center justify-content-center"
+              style={{ width: "250px", height: "250px" }}
+            >
+              <span className="text-white">無社團圖片</span>
+            </div>
+          )}
         </div>
         <div className="col">
           <div className="club-info text-start w-100"
             style={{ minWidth: 0, wordBreak: "break-word" }}>
             {isEditingClubInfo ? (
               <div>
+                <div className="mb-3">
+                  <label className="form-label fw-bold" htmlFor="clubImage">
+                    社團圖片
+                  </label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    id="clubImage"
+                    accept="image/*"
+                    onChange={e => {
+                      if (e.target.files && e.target.files[0]) setEditedImage(e.target.files[0]);
+                    }}
+                  />
+                  {/* 預覽新圖或現有圖 */}
+                  <div className="mt-2">
+                    {editedImage ? (
+                      <img
+                        src={URL.createObjectURL(editedImage)}
+                        alt="預覽"
+                        style={{ width: 120, height: 120, objectFit: "cover" }}
+                      />
+                    ) : clubDetail.image ? (
+                      <img
+                        src={
+                          clubDetail.image.startsWith("http")
+                            ? clubDetail.image
+                            : `${import.meta.env.VITE_API_URL || ""}${clubDetail.image}`
+                        }
+                        alt="社團圖片"
+                        style={{ width: 120, height: 120, objectFit: "cover" }}
+                      />
+                    ) : (
+                      <span className="text-secondary">無社團圖片</span>
+                    )}
+                  </div>
+                </div>
                 <div className="mb-3">
                   <label htmlFor="clubName" className="form-label fw-bold">
                     社團名稱

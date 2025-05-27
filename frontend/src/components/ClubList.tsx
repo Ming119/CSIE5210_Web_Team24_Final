@@ -108,7 +108,7 @@ const ClubList = () => {
           <span>重設</span>
         </button>
       </form>
-      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         {currentClubs.map((club: Club) => (
           <div className="col mb-4" key={club.id}>
             <ClubCard club={club} />

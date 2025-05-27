@@ -175,7 +175,7 @@ const MyClubs = () => {
                   <th>現任社長</th>
                   <th>社團人數</th>
                   <th>創立日期</th>
-                  <th>行動</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,7 +238,7 @@ const MyClubs = () => {
                   <th>身份</th>
                   <th>社團狀態</th>
                   <th>創立日期</th>
-                  <th>行動</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>

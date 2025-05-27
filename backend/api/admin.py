@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 from .models import (Club, Event, EventParticipation, FinanceRecord,
                      Membership, User)
@@ -43,12 +44,30 @@ def make_disbanded(modeladmin, request, queryset):
 
 
 class ClubAdmin(admin.ModelAdmin):
-    list_display = ("name", "description", "max_member", "status", "foundation_date")
+    list_display = (
+    "name",
+    "description",
+    "max_member",
+    "status",
+    "foundation_date",
+    "image_tag",
+)
     search_fields = ("name",)
     inlines = [MembershipInline]
     actions = [make_active, make_pending, make_rejected, make_suspended, make_disbanded]
-    fields = ("name", "description", "max_member", "status", "foundation_date")
-    readonly_fields = ("foundation_date",)
+    fields = ("name", "description", "max_member", "status", "foundation_date", "image")
+    readonly_fields = ("foundation_date", "image_tag")
+    fields = ("name", "description", "max_member", "status", "foundation_date", "image", "image_tag")
+
+    def image_tag(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="width:80px;height:80px;object-fit:cover;" />',
+                obj.image.url,
+            )
+        return "-"
+
+    image_tag.short_description = "圖片"
 
 
 # Custom admin class for Membership model

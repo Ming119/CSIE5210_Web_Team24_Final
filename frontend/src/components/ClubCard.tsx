@@ -38,18 +38,30 @@ const ClubCard = ({ club }: ClubCardProps) => {
   return (
     <Link to={`/clubs/${club.id}`} className="text-decoration-none text-dark">
       <div className="d-flex align-items-start">
-        <div
-          className="bg-success rounded flex-shrink-0 me-2"
-          style={{ width: "100px", height: "100px" }}
-        ></div>
-        <div className="text-start">
-          <h5 className="fw-bold mb-1">
+        {club.image ? (
+          <img
+            src={`${import.meta.env.VITE_API_URL || ""}${club.image}`}
+            alt="社團圖片"
+            className="rounded mb-2 me-3"
+            style={{ width: "100px", height: "100px", objectFit: "cover", flexShrink: 0 }}
+          />
+        ) : (
+          <div
+            className="bg-secondary rounded mb-2 me-3 d-flex align-items-center justify-content-center"
+            style={{ width: "100px", height: "100px", flexShrink: 0 }}
+          >
+            <span className="text-white">無社團圖片</span>
+          </div>
+        )}
+        <div className="text-start flex-grow-1">
+          <h5 className="fw-bold mb-1 d-flex align-items-center">
             {club.name}
+            {/* {statusLabel && <span className={statusClass}>{statusLabel}</span>} */}
           </h5>
           <p
             className="mb-0"
             style={{
-              maxWidth: "180px",
+              maxWidth: "300px",
               overflow: "hidden",
               textOverflow: "ellipsis",
               display: "-webkit-box",

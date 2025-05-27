@@ -24,6 +24,7 @@ class Club(models.Model):
     )
     max_member = models.PositiveIntegerField()
     foundation_date = models.DateField(auto_now_add=True)
+    image = models.ImageField(upload_to="club_images/", blank=True, null=True)
 
     @property
     def member_count(self):

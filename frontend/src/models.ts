@@ -10,6 +10,7 @@ export interface Club {
   userRole?: string; // 用戶在社團中的身份: 社長, 幹部, 社員, 準社員, 前社員等
   status?: "active" | "pending" | "rejected" | "suspended" | "disbanded"; // 社團狀態
   foundationDate?: Date;
+  image?: string;
 }
 
 export interface DateRange {

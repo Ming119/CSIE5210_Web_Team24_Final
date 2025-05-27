@@ -140,16 +140,6 @@ const Header = () => {
             <Link className="navbar-brand fw-bold mb-0 h1" to="/">
               NTU社團管理平台
             </Link>
-            {isLoggedIn && username && (
-              <Link
-                to="/account"
-                className="ms-3 text-primary fw-normal d-flex align-items-center"
-                style={{ fontSize: "1rem", textDecoration: "none" }}
-              >
-                <i className="bi bi-person-circle me-1" aria-hidden="true"></i>
-                {username}
-              </Link>
-            )}
           </div>
           {/* 右側：導覽列 */}
           <div className="d-flex align-items-center">
@@ -159,6 +149,21 @@ const Header = () => {
             {isLoggedIn && (
               <Link className="nav-link px-2" to="/my-clubs">
                 我的社團
+              </Link>
+            )}
+            {isLoggedIn && username && (
+              <Link
+                to="/account"
+                className="d-flex align-items-center px-2"
+                style={{
+                  fontSize: "1rem",
+                  textDecoration: "none",
+                  color: "#0d6efd",
+                  fontWeight: 500,
+                }}
+              >
+                <i className="bi bi-person-circle me-1" style={{ fontSize: "1.4rem" }}></i>
+                <span className="ms-1">{username}</span>
               </Link>
             )}
             {isLoggedIn ? (

@@ -20,6 +20,20 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+    
+    def update(self, instance, validated_data):
+        # 處理密碼變更
+        old_password = self.initial_data.get("old_password")
+        new_password = self.initial_data.get("new_password")
+        if old_password and new_password:
+            if not instance.check_password(old_password):
+                raise serializers.ValidationError({"old_password": "舊密碼錯誤"})
+            instance.set_password(new_password)
+        # 其他欄位更新
+        instance.name = validated_data.get("name", instance.name)
+        instance.contact = validated_data.get("contact", instance.contact)
+        instance.save()
+        return instance
 
     class Meta:
         model = User
@@ -118,6 +132,7 @@ class ClubSerializer(serializers.ModelSerializer):
     activities = serializers.SerializerMethodField()
     memberCount = serializers.SerializerMethodField()
     presidentName = serializers.SerializerMethodField()
+    image = serializers.ImageField(required=False, allow_null=True)
 
     def get_members(self, obj):
         # 回傳所有 membership，不只 accepted
@@ -140,7 +155,7 @@ class ClubSerializer(serializers.ModelSerializer):
         president = obj.membership_set.filter(
             is_manager=True, status="accepted"
         ).first()
-        return president.user.username if president else None
+        return president.user.name if president and president.user.name else president.user.username if president else None
 
     class Meta:
         model = Club
@@ -155,6 +170,7 @@ class ClubSerializer(serializers.ModelSerializer):
             "activities",
             "presidentName",
             "max_member",
+            "image",
         ]
 
 

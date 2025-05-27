@@ -22,6 +22,8 @@
 #     path('api', include(router.urls)), 
 # ]
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (TokenObtainPairView,
@@ -53,4 +55,8 @@ urlpatterns = [
   path('login/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
   path('memberships/<int:pk>/', views.MembershipDetailView.as_view(), name='membership-detail'),
   path('events/<int:event_id>/participants/<int:pk>/', views.EventParticipantDetailView.as_view(), name='event_participant_detail'),
+  
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
