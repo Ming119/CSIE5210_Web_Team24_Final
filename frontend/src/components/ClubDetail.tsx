@@ -340,7 +340,7 @@ const ClubDetail = () => {
                   : `${import.meta.env.VITE_API_URL || ""}${clubDetail.image}`
               }
               alt="社團圖片"
-              className="bg-success rounded overflow-hidden"
+              className="rounded overflow-hidden"
               style={{ width: "250px", height: "250px", objectFit: "cover" }}
             />
           ) : (
