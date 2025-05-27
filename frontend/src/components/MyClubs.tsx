@@ -255,10 +255,11 @@ const MyClubs = () => {
                       {(() => {
                         const myMembership = club.members?.find((m) => m.user === currentUserId);
                         if (!myMembership) return "-";
+                        if (myMembership.status === "pending") return "待審核";
                         if (myMembership.status === "rejected") return "已拒絕";
                         return myMembership.position ||
                           myMembership.username ||
-                          (myMembership.is_manager ? "社長" : "社員");
+                          (myMembership.is_manager ? "幹部" : "社員");
                       })()}
                     </td>
                     <td>
