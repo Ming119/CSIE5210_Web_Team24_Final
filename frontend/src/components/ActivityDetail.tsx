@@ -36,6 +36,9 @@ type Participation = {
   id: number;
   user: number;
   username: string;
+  name?: string;
+  email?: string;
+  contact?: string;
   payment_method: string;
   payment_status: string;
   is_manager?: boolean;
@@ -452,6 +455,8 @@ const ActivityDetail = () => {
             <thead>
               <tr>
                 <th>姓名</th>
+                <th>Email</th>
+                <th>聯絡方式</th>
                 <th>付款方式</th>
                 <th>付款狀態</th>
                 <th>操作</th>
@@ -460,7 +465,9 @@ const ActivityDetail = () => {
             <tbody>
               {participants.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.username}</td>
+                  <td>{p.name || p.username}</td>
+                  <td>{p.email || "-"}</td>
+                  <td>{p.contact || "-"}</td>
                   <td>{p.payment_method === "cash" ? "現金" : "銀行轉帳"}</td>
                   <td>
                     {p.payment_status === "confirmed"
@@ -484,7 +491,6 @@ const ActivityDetail = () => {
                         撤銷
                       </button>
                     )}
-                    {/* 管理員可取消報名 */}
                     <button
                       className="btn btn-outline-danger btn-sm ms-2"
                       onClick={() => handleManagerCancelParticipation(p.id)}

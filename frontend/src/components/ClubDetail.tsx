@@ -7,12 +7,13 @@ type Member = {
   id: number;
   user: number;
   username: string;
+  name?: string;
+  email?: string;
+  contact?: string;
   club: number;
   status: string;
   is_manager: boolean;
   position?: string;
-  phone?: string;
-  email?: string;
   joinDate?: string;
 };
 
@@ -444,7 +445,9 @@ const ClubDetail = () => {
           <table className="table table-striped text-start">
             <thead>
               <tr>
-                <th>成員名稱</th>
+                <th>姓名</th>
+                <th>Email</th>
+                <th>聯絡方式</th>
                 <th>職位</th>
                 <th>狀態</th>
                 <th>是否幹部</th>
@@ -453,7 +456,9 @@ const ClubDetail = () => {
             <tbody>
               {membersForTable.map((member) => (
                 <tr key={member.id}>
-                  <td>{member.username}</td>
+                  <td>{member.name || member.username}</td>
+                  <td>{member.email || "-"}</td>
+                  <td>{member.contact || "-"}</td>
                   <td>
                     {isManager ? (
                       <select

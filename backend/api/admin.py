@@ -6,8 +6,8 @@ from .models import (Club, Event, EventParticipation, FinanceRecord,
 
 # Custom admin class for User model
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("username", "email", "is_admin")
-    search_fields = ("username", "email")
+    list_display = ("username", "email", "is_admin", "name", "contact")
+    search_fields = ("username", "email", "name", "contact")
     list_filter = ("is_admin",)
 
 

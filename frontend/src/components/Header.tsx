@@ -134,35 +134,37 @@ const Header = () => {
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 py-2">
-        <div className="container-fluid">
-          <Link className="navbar-brand fw-bold d-flex align-items-center" to="/">
-            NTU社團管理平台
+        <div className="container-fluid d-flex justify-content-between align-items-center">
+          {/* 左側：logo + 帳號 */}
+          <div className="d-flex align-items-center">
+            <Link className="navbar-brand fw-bold mb-0 h1" to="/">
+              NTU社團管理平台
+            </Link>
             {isLoggedIn && username && (
-              <span className="ms-3 text-primary fw-normal" style={{ fontSize: "1rem" }}>
+              <Link
+                to="/account"
+                className="ms-3 text-primary fw-normal d-flex align-items-center"
+                style={{ fontSize: "1rem", textDecoration: "none" }}
+              >
                 <i className="bi bi-person-circle me-1" aria-hidden="true"></i>
                 {username}
-              </span>
+              </Link>
             )}
-          </Link>
-          <div className="d-flex">
+          </div>
+          {/* 右側：導覽列 */}
+          <div className="d-flex align-items-center">
+            <Link className="nav-link px-2" to="/">
+              社團一覽
+            </Link>
+            {isLoggedIn && (
+              <Link className="nav-link px-2" to="/my-clubs">
+                我的社團
+              </Link>
+            )}
             {isLoggedIn ? (
-              <>
-                <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-                  <li className="nav-item">
-                    <Link className="nav-link" to="/">
-                      社團一覽
-                    </Link>
-                  </li>
-                  <li className="nav-item">
-                    <Link className="nav-link" to="/my-clubs">
-                      我的社團
-                    </Link>
-                  </li>
-                </ul>
-                <button className="btn btn-primary ms-3" onClick={handleLogout}>
-                  登出
-                </button>
-              </>
+              <button className="btn btn-primary ms-3" onClick={handleLogout}>
+                登出
+              </button>
             ) : (
               <>
                 <button className="btn btn-primary ms-3" onClick={handleLogin}>

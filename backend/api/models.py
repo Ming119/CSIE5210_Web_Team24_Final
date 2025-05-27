@@ -4,6 +4,8 @@ from django.db import models
 
 class User(AbstractUser):
     is_admin = models.BooleanField(default=False)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    contact = models.CharField(max_length=100, blank=True, null=True)
 
 
 class Club(models.Model):

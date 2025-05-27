@@ -1,11 +1,12 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import ClubList from "./components/ClubList";
-import MyClubs from "./components/MyClubs";
-import ClubDetail from "./components/ClubDetail";
-import ActivityDetail from "./components/ActivityDetail";
-import Header from "./components/Header";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
+import AccountInfo from "./components/AccountInfo";
+import ActivityDetail from "./components/ActivityDetail";
+import ClubDetail from "./components/ClubDetail";
+import ClubList from "./components/ClubList";
+import Header from "./components/Header";
+import MyClubs from "./components/MyClubs";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
               path="/clubs/:clubId/activities/:id"
               element={<ActivityDetail />}
             />
+            <Route path="/account" element={<AccountInfo />} />
           </Routes>
         </div>
       </div>
